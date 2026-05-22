@@ -8,13 +8,8 @@ import {
   DEAL_COLOR, KYC_COLOR, DEAL_STEPS, KYC_DOCS, PRODUCT_TYPES, LEAD_SOURCES,
   clientToForm, isStaleClient,
 } from '../constants/clients';
-import { CONSENT_TYPES, consentsToPayload, interactionFlagsToPayload } from '../constants/compliance';
-import ConsentFields, { InteractionFlagFields } from '../components/ConsentFields';
+import CallLogFlow from '../components/CallLogFlow';
 import ClientPhoneActions from '../components/ClientPhoneActions';
-import AiSuggestCard from '../components/AiSuggestCard';
-import NextFollowUpPrompt from '../components/NextFollowUpPrompt';
-import FollowUpSnooze from '../components/FollowUpSnooze';
-import { formatFollowUpDate, isFollowUpOverdue } from '../utils/followUp';
 
 const ACTIVITY_ICONS = {
   call: '📞',
@@ -34,9 +29,6 @@ export default function ClientDetail() {
   const [noteText, setNoteText] = useState('');
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [contactNoteOpen, setContactNoteOpen] = useState(false);
-  const [contactNote, setContactNote] = useState('');
-  const [followUpPromptOpen, setFollowUpPromptOpen] = useState(false);
 
   const reload = () => {
     setLoading(true);
@@ -54,24 +46,6 @@ export default function ClientDetail() {
       setTasks(tasks.map((t) => (t._id === taskId ? { ...t, status: 'Completed' } : t)));
       toast.success('Task completed');
     } catch { toast.error('Failed'); }
-  };
-
-  const logContact = () => {
-    setContactNote('');
-    setContactNoteOpen(true);
-  };
-
-  const submitContactLog = async (e) => {
-    e.preventDefault();
-    try {
-      const r = await clientsApi.logContact(id, { note: contactNote.trim() || 'Contact logged' });
-      setClient(r.data);
-      setContactNoteOpen(false);
-      toast.success('Contact logged');
-      setFollowUpPromptOpen(true);
-    } catch {
-      toast.error('Failed to log contact');
-    }
   };
 
   const addNote = async (e) => {
@@ -105,9 +79,6 @@ export default function ClientDetail() {
         dealValue: form.dealValue === '' ? undefined : Number(form.dealValue),
         expectedCommission: form.expectedCommission === '' ? undefined : Number(form.expectedCommission),
         lastContactedAt: form.lastContactedAt || undefined,
-        nextFollowUpDate: form.nextFollowUpDate || null,
-        consents: consentsToPayload(form.consents),
-        interactionFlags: interactionFlagsToPayload(form.interactionFlags),
       });
       setClient(r.data);
       setEditOpen(false);
@@ -134,7 +105,6 @@ export default function ClientDetail() {
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 flex-1">{client.name}</h1>
-        <button type="button" className="btn-secondary text-sm" onClick={logContact}>Log contact</button>
         <button type="button" className="btn-secondary text-sm" onClick={() => setNoteOpen(true)}>Add note</button>
         <button type="button" className="btn-primary text-sm" onClick={openEdit}>Edit</button>
       </div>
@@ -144,6 +114,14 @@ export default function ClientDetail() {
           Stale lead — no contact in 14+ days. Log a call or update last contacted date.
         </div>
       )}
+
+      <div className="card p-4">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Log a call</p>
+        {client.phone && (
+          <ClientPhoneActions phone={client.phone} clientName={client.name} className="mb-3" />
+        )}
+        <CallLogFlow clientId={id} clientName={client.name} onUpdated={setClient} />
+      </div>
 
       <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -162,16 +140,7 @@ export default function ClientDetail() {
               <p><span className="font-medium">Last contacted:</span> {format(new Date(client.lastContactedAt), 'MMM d, yyyy')}</p>
             )}
             {client.notes && <p><span className="font-medium">Notes:</span> {client.notes}</p>}
-            {client.nextFollowUpDate && (
-              <p className={`${isFollowUpOverdue(client.nextFollowUpDate) ? 'text-red-700 bg-red-50' : 'text-primary-700 bg-primary-50'} px-3 py-1.5 rounded-lg`}>
-                <span className="font-medium">Follow-up: </span>
-                {formatFollowUpDate(client.nextFollowUpDate)}
-              </p>
-            )}
-            {client.nextAction && <p className="text-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg"><span className="font-medium">Next Action:</span> {client.nextAction}</p>}
-            {(client.nextFollowUpDate || client.nextAction) && (
-              <FollowUpSnooze clientId={client._id} onDone={(c) => setClient(c)} />
-            )}
+            {client.nextAction && <p className="text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg"><span className="font-medium">Next Action:</span> {client.nextAction}</p>}
           </div>
           <div className="flex gap-2 flex-wrap">
             <span className={`badge ${DEAL_COLOR[client.dealStatus]}`}>{client.dealStatus}</span>
@@ -197,39 +166,9 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <AiSuggestCard clientId={id} onApplied={reload} />
-
-      <div className="card">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Consent & compliance</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          {CONSENT_TYPES.map(({ key, label }) => {
-            const c = client.consents?.[key];
-            return (
-              <div key={key} className={`p-3 rounded-lg text-sm ${c?.granted ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700'}`}>
-                <p className="font-medium text-gray-800 dark:text-gray-200">{label}</p>
-                <p className={c?.granted ? 'text-green-700 dark:text-green-400' : 'text-gray-500'}>
-                  {c?.granted ? `Granted${c.method ? ` (${c.method})` : ''}` : 'Not recorded'}
-                </p>
-                {c?.grantedAt && (
-                  <p className="text-xs text-gray-500 mt-1">{format(new Date(c.grantedAt), 'MMM d, yyyy')}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {(client.interactionFlags?.callRecorded || client.interactionFlags?.smsSent) && (
-          <div className="flex flex-wrap gap-2 text-xs">
-            {client.interactionFlags?.callRecorded && <span className="badge bg-violet-100 text-violet-800">Call recorded</span>}
-            {client.interactionFlags?.smsSent && <span className="badge bg-blue-100 text-blue-700">SMS sent</span>}
-            {client.interactionFlags?.marketingContact && <span className="badge bg-purple-100 text-purple-700">Marketing contact</span>}
-            {client.interactionFlags?.sensitiveDiscussed && <span className="badge bg-amber-100 text-amber-800">Sensitive data discussed</span>}
-          </div>
-        )}
-      </div>
-
       <div className="card">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">KYC documents ({kycDone}/{KYC_DOCS.length})</h2>
+          <h2 className="font-semibold text-gray-900">KYC documents ({kycDone}/{KYC_DOCS.length})</h2>
         </div>
         <div className="space-y-2">
           {KYC_DOCS.map((d) => (
@@ -312,25 +251,6 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <Modal open={contactNoteOpen} onClose={() => setContactNoteOpen(false)} title="Log contact">
-        <form onSubmit={submitContactLog} className="space-y-4">
-          <textarea className="input" rows={3} value={contactNote} onChange={(e) => setContactNote(e.target.value)} placeholder="What happened on this contact? (optional)" />
-          <div className="flex justify-end gap-3">
-            <button type="button" className="btn-secondary" onClick={() => setContactNoteOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Log contact</button>
-          </div>
-        </form>
-      </Modal>
-
-      <NextFollowUpPrompt
-        open={followUpPromptOpen}
-        onClose={() => setFollowUpPromptOpen(false)}
-        clientId={id}
-        clientName={client?.name}
-        defaultAction={client?.nextAction}
-        onSaved={(c) => setClient(c)}
-      />
-
       <Modal open={noteOpen} onClose={() => setNoteOpen(false)} title="Add note">
         <form onSubmit={addNote} className="space-y-4">
           <textarea className="input" rows={4} value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Call summary, follow-up details…" required />
@@ -352,16 +272,6 @@ export default function ClientDetail() {
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">Deal status</label><select value={form.dealStatus} onChange={(e) => setForm({ ...form, dealStatus: e.target.value })} className="input">{DEAL_STEPS.map((s) => <option key={s}>{s}</option>)}</select></div>
               <div><label className="label">KYC status</label><select value={form.kycStatus} onChange={(e) => setForm({ ...form, kycStatus: e.target.value })} className="input">{['Not Started', 'In Progress', 'Completed'].map((s) => <option key={s}>{s}</option>)}</select></div>
-            </div>
-            <div><label className="label">Next action</label><input value={form.nextAction} onChange={(e) => setForm({ ...form, nextAction: e.target.value })} className="input" /></div>
-            <div><label className="label">Follow-up date</label><input type="date" value={form.nextFollowUpDate} onChange={(e) => setForm({ ...form, nextFollowUpDate: e.target.value })} className="input" /></div>
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Consents</h3>
-              <ConsentFields consents={form.consents} onChange={(consents) => setForm({ ...form, consents })} />
-            </div>
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Interaction flags</h3>
-              <InteractionFlagFields flags={form.interactionFlags} onChange={(interactionFlags) => setForm({ ...form, interactionFlags })} />
             </div>
             <div className="flex justify-end gap-3">
               <button type="button" className="btn-secondary" onClick={() => setEditOpen(false)}>Cancel</button>

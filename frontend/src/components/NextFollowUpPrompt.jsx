@@ -17,6 +17,7 @@ export default function NextFollowUpPrompt({
   clientId,
   clientName,
   defaultAction = '',
+  defaultFollowUpDays,
   onSaved,
 }) {
   const [nextAction, setNextAction] = useState(defaultAction);
@@ -26,9 +27,13 @@ export default function NextFollowUpPrompt({
   React.useEffect(() => {
     if (open) {
       setNextAction(defaultAction || '');
-      setNextFollowUpDate('');
+      if (defaultFollowUpDays != null) {
+        setNextFollowUpDate(format(addDays(new Date(), defaultFollowUpDays), 'yyyy-MM-dd'));
+      } else {
+        setNextFollowUpDate('');
+      }
     }
-  }, [open, defaultAction]);
+  }, [open, defaultAction, defaultFollowUpDays]);
 
   const pickQuick = (days) => {
     setNextFollowUpDate(format(addDays(new Date(), days), 'yyyy-MM-dd'));

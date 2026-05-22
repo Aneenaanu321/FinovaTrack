@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { authApi, notificationsApi, auditApi } from '../services/api';
+import { authApi, notificationsApi, auditApi, clientsApi } from '../services/api';
+import { downloadClientsCsv, downloadClientsExcel } from '../utils/clientExport';
 import PasswordHints from '../components/PasswordHints';
 import { validatePasswordForm } from '../utils/validation';
 import { subscribeToPush, unsubscribeFromPush } from '../utils/push';
@@ -34,6 +35,14 @@ export default function Settings() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(true);
   const [passwordErrors, setPasswordErrors] = useState({});
+  const [backupPrefs, setBackupPrefs] = useState({
+    weeklyBackupEnabled: true,
+    weeklyBackupWeekday: 1,
+    weeklyBackupHour: 8,
+    lastWeeklyBackupAt: null,
+  });
+  const [savingBackup, setSavingBackup] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -54,7 +63,41 @@ export default function Settings() {
       .then((r) => setAuditLogs(r.data.items || []))
       .catch(() => {})
       .finally(() => setAuditLoading(false));
+    clientsApi.backupPreferences()
+      .then((r) => setBackupPrefs(r.data))
+      .catch(() => {});
   }, []);
+
+  const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  const saveBackupPrefs = async (e) => {
+    e.preventDefault();
+    setSavingBackup(true);
+    try {
+      const res = await clientsApi.updateBackupPreferences({
+        weeklyBackupEnabled: backupPrefs.weeklyBackupEnabled,
+        weeklyBackupWeekday: Number(backupPrefs.weeklyBackupWeekday),
+        weeklyBackupHour: Number(backupPrefs.weeklyBackupHour),
+      });
+      setBackupPrefs(res.data);
+      toast.success('Backup schedule saved');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save backup settings');
+    } finally {
+      setSavingBackup(false);
+    }
+  };
+
+  const sendBackupNow = async () => {
+    try {
+      const res = await clientsApi.sendBackupNow();
+      toast.success(res.data.message);
+      const prefs = await clientsApi.backupPreferences();
+      setBackupPrefs(prefs.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send backup');
+    }
+  };
 
   const saveNotifPrefs = async (e) => {
     e.preventDefault();
@@ -181,6 +224,102 @@ export default function Settings() {
           <button type="submit" className="btn-primary" disabled={savingProfile}>
             {savingProfile ? 'Saving…' : 'Save profile'}
           </button>
+        </form>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Protect your data</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Export a full copy of your clients anytime. Schedule a weekly backup email with your client list attached.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={exportingData}
+            onClick={async () => {
+              setExportingData(true);
+              try {
+                await downloadClientsCsv();
+                toast.success('Downloaded full client backup (CSV)');
+              } catch {
+                toast.error('Export failed');
+              } finally {
+                setExportingData(false);
+              }
+            }}
+          >
+            {exportingData ? 'Exporting…' : 'Export all clients (CSV)'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={exportingData}
+            onClick={async () => {
+              setExportingData(true);
+              try {
+                await downloadClientsExcel();
+                toast.success('Downloaded full client backup (Excel)');
+              } catch {
+                toast.error('Export failed');
+              } finally {
+                setExportingData(false);
+              }
+            }}
+          >
+            Export all (Excel)
+          </button>
+        </div>
+        <form onSubmit={saveBackupPrefs} className="space-y-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={backupPrefs.weeklyBackupEnabled}
+              onChange={(e) => setBackupPrefs({ ...backupPrefs, weeklyBackupEnabled: e.target.checked })}
+            />
+            Weekly backup email (CSV attachment)
+          </label>
+          {backupPrefs.weeklyBackupEnabled && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Day (UTC)</label>
+                <select
+                  className="input"
+                  value={backupPrefs.weeklyBackupWeekday}
+                  onChange={(e) => setBackupPrefs({ ...backupPrefs, weeklyBackupWeekday: e.target.value })}
+                >
+                  {WEEKDAYS.map((label, i) => (
+                    <option key={label} value={i}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Hour (UTC, 0–23)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  className="input"
+                  value={backupPrefs.weeklyBackupHour}
+                  onChange={(e) => setBackupPrefs({ ...backupPrefs, weeklyBackupHour: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          {backupPrefs.lastWeeklyBackupAt && (
+            <p className="text-xs text-gray-500">
+              Last backup: {format(new Date(backupPrefs.lastWeeklyBackupAt), 'MMM d, yyyy h:mm a')}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" className="btn-primary" disabled={savingBackup}>
+              {savingBackup ? 'Saving…' : 'Save backup schedule'}
+            </button>
+            <button type="button" className="btn-secondary" onClick={sendBackupNow}>
+              Send backup now
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">Without SMTP, backups are logged in the backend console.</p>
         </form>
       </section>
 
