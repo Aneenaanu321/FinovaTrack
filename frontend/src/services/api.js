@@ -184,4 +184,27 @@ export const dashboardApi = {
   sendSummary: (period) => api.post('/dashboard/send-summary', { period }),
 };
 
+export const notificationsApi = {
+  list: () => api.get('/notifications'),
+  summary: () => api.get('/notifications/summary'),
+  dismiss: (key) => api.patch(`/notifications/dismiss/${encodeURIComponent(key)}`),
+  dismissAll: () => api.patch('/notifications/dismiss-all'),
+  preferences: () => api.get('/notifications/preferences'),
+  updatePreferences: (data) => api.put('/notifications/preferences', data),
+  sendDigestNow: () => api.post('/notifications/digest/send-now'),
+  vapidPublicKey: () => api.get('/notifications/vapid-public-key'),
+  pushSubscribe: (data) => api.post('/notifications/push/subscribe', data),
+  pushUnsubscribe: (data) => api.delete('/notifications/push/subscribe', { data }),
+};
+
+export const auditApi = {
+  list: (params) => api.get('/audit-log', { params }),
+};
+
+export const integrationsApi = {
+  status: () => api.get('/integrations/status'),
+  crm: (params) => api.get('/integrations/crm', { params }),
+  banking: (q) => api.get('/integrations/banking', { params: { q } }),
+};
+
 export default api;
