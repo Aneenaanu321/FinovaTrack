@@ -1,0 +1,18 @@
+{
+  "name": "FinovaTrack",
+  "short_name": "FinovaTrack",
+  "description": "Bank sales productivity — clients, tasks, and appointments",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e3a5f",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -3,11 +3,17 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Settings from './pages/Settings';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Tasks from './pages/Tasks';
 import Appointments from './pages/Appointments';
+import Pipeline from './pages/Pipeline';
+import NeedsAttention from './pages/NeedsAttention';
+import Integrations from './pages/Integrations';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -26,12 +32,18 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route index element={<Dashboard />} />
+          <Route path="attention" element={<NeedsAttention />} />
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
+          <Route path="pipeline" element={<Pipeline />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="appointments" element={<Appointments />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="integrations" element={<Integrations />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

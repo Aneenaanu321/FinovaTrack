@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi } from '../services/api';
+import { authApi, persistSession, clearSession } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -10,14 +10,21 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(true);
 
+  const applySession = (data) => {
+    persistSession(data);
+    setUser(data.user);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       authApi.me()
-        .then((res) => setUser(res.data))
+        .then((res) => {
+          setUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
+        })
         .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          clearSession();
           setUser(null);
         })
         .finally(() => setLoading(false));
@@ -28,26 +35,32 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await authApi.login({ email, password });
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
+    applySession(res.data);
   };
 
   const register = async (name, email, password) => {
     const res = await authApi.register({ name, email, password });
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
+    applySession(res.data);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const updateUser = (profile) => {
+    setUser(profile);
+    localStorage.setItem('user', JSON.stringify(profile));
+  };
+
+  const logout = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    try {
+      if (refreshToken) await authApi.logout(refreshToken);
+    } catch {
+      /* ignore */
+    }
+    clearSession();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,12 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { clientsApi, tasksApi, appointmentsApi } from '../services/api';
+import Modal from '../components/Modal';
+import {
+  DEAL_COLOR, KYC_COLOR, DEAL_STEPS, KYC_DOCS, PRODUCT_TYPES, LEAD_SOURCES,
+  clientToForm, isStaleClient,
+} from '../constants/clients';
+import { CONSENT_TYPES, consentsToPayload, interactionFlagsToPayload } from '../constants/compliance';
+import ConsentFields, { InteractionFlagFields } from '../components/ConsentFields';
+import ClientPhoneActions from '../components/ClientPhoneActions';
+import AiSuggestCard from '../components/AiSuggestCard';
+import NextFollowUpPrompt from '../components/NextFollowUpPrompt';
+import FollowUpSnooze from '../components/FollowUpSnooze';
+import { formatFollowUpDate, isFollowUpOverdue } from '../utils/followUp';
 
-const KYC_COLOR = { 'Not Started': 'bg-gray-100 text-gray-600', 'In Progress': 'bg-yellow-100 text-yellow-700', 'Completed': 'bg-green-100 text-green-700' };
-const DEAL_COLOR = { 'New': 'bg-gray-100 text-gray-600', 'Contacted': 'bg-blue-100 text-blue-700', 'Interested': 'bg-purple-100 text-purple-700', 'Closed': 'bg-green-100 text-green-700' };
-const DEAL_STEPS = ['New', 'Contacted', 'Interested', 'Closed'];
+const ACTIVITY_ICONS = {
+  call: '📞',
+  note: '📝',
+  status_change: '🔄',
+  contact: '✓',
+};
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -14,41 +29,154 @@ export default function ClientDetail() {
   const [tasks, setTasks] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [contactNoteOpen, setContactNoteOpen] = useState(false);
+  const [contactNote, setContactNote] = useState('');
+  const [followUpPromptOpen, setFollowUpPromptOpen] = useState(false);
 
-  useEffect(() => {
+  const reload = () => {
+    setLoading(true);
     Promise.all([clientsApi.get(id), tasksApi.list({ clientId: id }), appointmentsApi.list({ clientId: id })])
       .then(([c, t, a]) => { setClient(c.data); setTasks(t.data); setAppointments(a.data); })
       .catch(() => toast.error('Failed to load client'))
       .finally(() => setLoading(false));
-  }, [id]);
+  };
+
+  useEffect(() => { reload(); }, [id]);
 
   const completeTask = async (taskId) => {
-    try { await tasksApi.complete(taskId); setTasks(tasks.map(t => t._id === taskId ? { ...t, status: 'Completed' } : t)); toast.success('Task completed'); }
-    catch { toast.error('Failed'); }
+    try {
+      await tasksApi.complete(taskId);
+      setTasks(tasks.map((t) => (t._id === taskId ? { ...t, status: 'Completed' } : t)));
+      toast.success('Task completed');
+    } catch { toast.error('Failed'); }
+  };
+
+  const logContact = () => {
+    setContactNote('');
+    setContactNoteOpen(true);
+  };
+
+  const submitContactLog = async (e) => {
+    e.preventDefault();
+    try {
+      const r = await clientsApi.logContact(id, { note: contactNote.trim() || 'Contact logged' });
+      setClient(r.data);
+      setContactNoteOpen(false);
+      toast.success('Contact logged');
+      setFollowUpPromptOpen(true);
+    } catch {
+      toast.error('Failed to log contact');
+    }
+  };
+
+  const addNote = async (e) => {
+    e.preventDefault();
+    if (!noteText.trim()) return;
+    try {
+      const r = await clientsApi.addActivity(id, { type: 'note', title: 'Note added', body: noteText.trim() });
+      setClient(r.data);
+      setNoteText('');
+      setNoteOpen(false);
+      toast.success('Note added');
+    } catch { toast.error('Failed to add note'); }
+  };
+
+  const toggleKycDoc = async (key) => {
+    const next = { ...client.kycDocuments, [key]: !client.kycDocuments?.[key] };
+    try {
+      const r = await clientsApi.update(id, { kycDocuments: next });
+      setClient(r.data);
+    } catch { toast.error('Failed to update KYC docs'); }
+  };
+
+  const openEdit = () => { setForm(clientToForm(client)); setEditOpen(true); };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const r = await clientsApi.update(id, {
+        ...form,
+        dealValue: form.dealValue === '' ? undefined : Number(form.dealValue),
+        expectedCommission: form.expectedCommission === '' ? undefined : Number(form.expectedCommission),
+        lastContactedAt: form.lastContactedAt || undefined,
+        nextFollowUpDate: form.nextFollowUpDate || null,
+        consents: consentsToPayload(form.consents),
+        interactionFlags: interactionFlagsToPayload(form.interactionFlags),
+      });
+      setClient(r.data);
+      setEditOpen(false);
+      toast.success('Client updated');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Update failed');
+    } finally { setSaving(false); }
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
   if (!client) return <div className="text-center py-16 text-gray-400">Client not found</div>;
 
   const dealIdx = DEAL_STEPS.indexOf(client.dealStatus);
+  const stale = isStaleClient(client);
+  const activities = [...(client.activities || [])].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+  const kycDone = KYC_DOCS.filter((d) => client.kycDocuments?.[d.key]).length;
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/clients" className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></Link>
-        <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link to="/clients" className="text-gray-400 hover:text-gray-600">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        </Link>
+        <h1 className="text-2xl font-bold text-gray-900 flex-1">{client.name}</h1>
+        <button type="button" className="btn-secondary text-sm" onClick={logContact}>Log contact</button>
+        <button type="button" className="btn-secondary text-sm" onClick={() => setNoteOpen(true)}>Add note</button>
+        <button type="button" className="btn-primary text-sm" onClick={openEdit}>Edit</button>
       </div>
+
+      {stale && (
+        <div className="card bg-amber-50 border-amber-200 text-amber-900 text-sm">
+          Stale lead — no contact in 14+ days. Log a call or update last contacted date.
+        </div>
+      )}
+
       <div className="card">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-2">
-            {client.phone && <p className="text-sm text-gray-600"><span className="font-medium">Phone:</span> {client.phone}</p>}
-            {client.email && <p className="text-sm text-gray-600"><span className="font-medium">Email:</span> {client.email}</p>}
-            {client.notes && <p className="text-sm text-gray-600"><span className="font-medium">Notes:</span> {client.notes}</p>}
-            {client.nextAction && <p className="text-sm text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg"><span className="font-medium">Next Action:</span> {client.nextAction}</p>}
+          <div className="space-y-2 text-sm text-gray-600">
+            {client.phone && <p><span className="font-medium">Phone:</span> {client.phone}</p>}
+            {client.email && <p><span className="font-medium">Email:</span> {client.email}</p>}
+            {client.productType && <p><span className="font-medium">Product:</span> {client.productType}</p>}
+            {client.leadSource && <p><span className="font-medium">Lead source:</span> {client.leadSource}</p>}
+            {(client.dealValue != null || client.expectedCommission != null) && (
+              <p>
+                {client.dealValue != null && <span><span className="font-medium">Deal value:</span> ${Number(client.dealValue).toLocaleString()}</span>}
+                {client.expectedCommission != null && <span className="ml-4"><span className="font-medium">Commission:</span> ${Number(client.expectedCommission).toLocaleString()}</span>}
+              </p>
+            )}
+            {client.lastContactedAt && (
+              <p><span className="font-medium">Last contacted:</span> {format(new Date(client.lastContactedAt), 'MMM d, yyyy')}</p>
+            )}
+            {client.notes && <p><span className="font-medium">Notes:</span> {client.notes}</p>}
+            {client.nextFollowUpDate && (
+              <p className={`${isFollowUpOverdue(client.nextFollowUpDate) ? 'text-red-700 bg-red-50' : 'text-primary-700 bg-primary-50'} px-3 py-1.5 rounded-lg`}>
+                <span className="font-medium">Follow-up: </span>
+                {formatFollowUpDate(client.nextFollowUpDate)}
+              </p>
+            )}
+            {client.nextAction && <p className="text-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg"><span className="font-medium">Next Action:</span> {client.nextAction}</p>}
+            {(client.nextFollowUpDate || client.nextAction) && (
+              <FollowUpSnooze clientId={client._id} onDone={(c) => setClient(c)} />
+            )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <span className={`badge ${DEAL_COLOR[client.dealStatus]}`}>{client.dealStatus}</span>
             <span className={`badge ${KYC_COLOR[client.kycStatus]}`}>KYC: {client.kycStatus}</span>
+            {stale && <span className="badge bg-amber-100 text-amber-800">Stale</span>}
           </div>
         </div>
         <div className="mt-6">
@@ -68,15 +196,89 @@ export default function ClientDetail() {
           </div>
         </div>
       </div>
+
+      <AiSuggestCard clientId={id} onApplied={reload} />
+
+      <div className="card">
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Consent & compliance</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          {CONSENT_TYPES.map(({ key, label }) => {
+            const c = client.consents?.[key];
+            return (
+              <div key={key} className={`p-3 rounded-lg text-sm ${c?.granted ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700'}`}>
+                <p className="font-medium text-gray-800 dark:text-gray-200">{label}</p>
+                <p className={c?.granted ? 'text-green-700 dark:text-green-400' : 'text-gray-500'}>
+                  {c?.granted ? `Granted${c.method ? ` (${c.method})` : ''}` : 'Not recorded'}
+                </p>
+                {c?.grantedAt && (
+                  <p className="text-xs text-gray-500 mt-1">{format(new Date(c.grantedAt), 'MMM d, yyyy')}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {(client.interactionFlags?.callRecorded || client.interactionFlags?.smsSent) && (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {client.interactionFlags?.callRecorded && <span className="badge bg-violet-100 text-violet-800">Call recorded</span>}
+            {client.interactionFlags?.smsSent && <span className="badge bg-blue-100 text-blue-700">SMS sent</span>}
+            {client.interactionFlags?.marketingContact && <span className="badge bg-purple-100 text-purple-700">Marketing contact</span>}
+            {client.interactionFlags?.sensitiveDiscussed && <span className="badge bg-amber-100 text-amber-800">Sensitive data discussed</span>}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100">KYC documents ({kycDone}/{KYC_DOCS.length})</h2>
+        </div>
+        <div className="space-y-2">
+          {KYC_DOCS.map((d) => (
+            <label key={d.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!client.kycDocuments?.[d.key]}
+                onChange={() => toggleKycDoc(d.key)}
+                className="rounded border-gray-300"
+              />
+              <span className={`text-sm ${client.kycDocuments?.[d.key] ? 'text-gray-900 line-through decoration-green-500' : 'text-gray-700'}`}>{d.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 className="font-semibold text-gray-900 mb-3">Activity timeline</h2>
+        {activities.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center">No activity yet — log a contact or add a note</p>
+        ) : (
+          <ul className="space-y-3 border-l-2 border-gray-100 ml-2 pl-4">
+            {activities.map((a) => (
+              <li key={a._id} className="relative">
+                <span className="absolute -left-[1.35rem] top-1 w-5 h-5 bg-white flex items-center justify-center text-xs">
+                  {ACTIVITY_ICONS[a.type] || '•'}
+                </span>
+                <p className="text-sm font-medium text-gray-900">{a.title}</p>
+                {a.body && <p className="text-sm text-gray-600 mt-0.5">{a.body}</p>}
+                <p className="text-xs text-gray-400 mt-1">
+                  {format(new Date(a.createdAt), 'MMM d, yyyy h:mm a')}
+                  {' · '}
+                  {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card">
           <h2 className="font-semibold text-gray-900 mb-3">Tasks ({tasks.length})</h2>
           {tasks.length === 0 ? <p className="text-sm text-gray-400 py-4 text-center">No tasks for this client</p> : (
             <ul className="space-y-2">
-              {tasks.map(t => (
+              {tasks.map((t) => (
                 <li key={t._id} className={`flex items-start gap-3 p-2 rounded-lg ${t.status === 'Completed' ? 'opacity-50' : 'hover:bg-gray-50'}`}>
                   {t.status === 'Pending' ? (
-                    <button onClick={() => completeTask(t._id)} className="mt-0.5 w-4 h-4 rounded border-2 border-gray-300 hover:border-green-500 flex-shrink-0" />
+                    <button type="button" onClick={() => completeTask(t._id)} className="mt-0.5 w-4 h-4 rounded border-2 border-gray-300 hover:border-green-500 flex-shrink-0" />
                   ) : (
                     <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   )}
@@ -93,7 +295,7 @@ export default function ClientDetail() {
           <h2 className="font-semibold text-gray-900 mb-3">Appointments ({appointments.length})</h2>
           {appointments.length === 0 ? <p className="text-sm text-gray-400 py-4 text-center">No appointments for this client</p> : (
             <ul className="space-y-2">
-              {appointments.map(a => (
+              {appointments.map((a) => (
                 <li key={a._id} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg">
                   <div className="w-10 h-10 bg-primary-50 rounded-lg flex flex-col items-center justify-center flex-shrink-0">
                     <span className="text-xs font-bold text-primary-600">{format(new Date(a.dateTime), 'MMM')}</span>
@@ -109,6 +311,65 @@ export default function ClientDetail() {
           )}
         </div>
       </div>
+
+      <Modal open={contactNoteOpen} onClose={() => setContactNoteOpen(false)} title="Log contact">
+        <form onSubmit={submitContactLog} className="space-y-4">
+          <textarea className="input" rows={3} value={contactNote} onChange={(e) => setContactNote(e.target.value)} placeholder="What happened on this contact? (optional)" />
+          <div className="flex justify-end gap-3">
+            <button type="button" className="btn-secondary" onClick={() => setContactNoteOpen(false)}>Cancel</button>
+            <button type="submit" className="btn-primary">Log contact</button>
+          </div>
+        </form>
+      </Modal>
+
+      <NextFollowUpPrompt
+        open={followUpPromptOpen}
+        onClose={() => setFollowUpPromptOpen(false)}
+        clientId={id}
+        clientName={client?.name}
+        defaultAction={client?.nextAction}
+        onSaved={(c) => setClient(c)}
+      />
+
+      <Modal open={noteOpen} onClose={() => setNoteOpen(false)} title="Add note">
+        <form onSubmit={addNote} className="space-y-4">
+          <textarea className="input" rows={4} value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Call summary, follow-up details…" required />
+          <div className="flex justify-end gap-3">
+            <button type="button" className="btn-secondary" onClick={() => setNoteOpen(false)}>Cancel</button>
+            <button type="submit" className="btn-primary">Save note</button>
+          </div>
+        </form>
+      </Modal>
+
+      {form && (
+        <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit client">
+          <form onSubmit={saveEdit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+            <div><label className="label">Name</label><input name="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" required /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="label">Product</label><select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value })} className="input"><option value="">—</option>{PRODUCT_TYPES.filter(Boolean).map((s) => <option key={s}>{s}</option>)}</select></div>
+              <div><label className="label">Lead source</label><select value={form.leadSource} onChange={(e) => setForm({ ...form, leadSource: e.target.value })} className="input"><option value="">—</option>{LEAD_SOURCES.filter(Boolean).map((s) => <option key={s}>{s}</option>)}</select></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="label">Deal status</label><select value={form.dealStatus} onChange={(e) => setForm({ ...form, dealStatus: e.target.value })} className="input">{DEAL_STEPS.map((s) => <option key={s}>{s}</option>)}</select></div>
+              <div><label className="label">KYC status</label><select value={form.kycStatus} onChange={(e) => setForm({ ...form, kycStatus: e.target.value })} className="input">{['Not Started', 'In Progress', 'Completed'].map((s) => <option key={s}>{s}</option>)}</select></div>
+            </div>
+            <div><label className="label">Next action</label><input value={form.nextAction} onChange={(e) => setForm({ ...form, nextAction: e.target.value })} className="input" /></div>
+            <div><label className="label">Follow-up date</label><input type="date" value={form.nextFollowUpDate} onChange={(e) => setForm({ ...form, nextFollowUpDate: e.target.value })} className="input" /></div>
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Consents</h3>
+              <ConsentFields consents={form.consents} onChange={(consents) => setForm({ ...form, consents })} />
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Interaction flags</h3>
+              <InteractionFlagFields flags={form.interactionFlags} onChange={(interactionFlags) => setForm({ ...form, interactionFlags })} />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button type="button" className="btn-secondary" onClick={() => setEditOpen(false)}>Cancel</button>
+              <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
