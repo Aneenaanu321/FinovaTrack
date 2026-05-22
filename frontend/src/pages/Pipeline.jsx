@@ -6,6 +6,7 @@ import { DEAL_STEPS, KYC_COLOR } from '../constants/clients';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
 import ClientPhoneActions from '../components/ClientPhoneActions';
+import CallLogFlow from '../components/CallLogFlow';
 
 export default function Pipeline() {
   const [clients, setClients] = useState([]);
@@ -159,6 +160,15 @@ export default function Pipeline() {
                         {c.nextAction}
                       </p>
                     )}
+                    <CallLogFlow
+                      clientId={c._id}
+                      clientName={c.name}
+                      compact
+                      className="mt-2"
+                      onUpdated={(updated) => {
+                        setClients((prev) => prev.map((x) => (x._id === updated._id ? updated : x)));
+                      }}
+                    />
                   </div>
                 ))}
                 {byStage[stage].length === 0 && (

@@ -128,21 +128,17 @@ export const clientsApi = {
   restore: (id) => api.post(`/clients/${id}/restore`),
   deleted: () => api.get('/clients/deleted'),
   stale: () => api.get('/clients/stale'),
-  needsAttention: () => api.get('/clients/needs-attention'),
-  snooze: (id, data) => api.patch(`/clients/${id}/snooze`, data),
   checkDuplicates: (data) => api.post('/clients/check-duplicates', data),
+  importPreview: (csv) => api.post('/clients/import/preview', { csv }),
   importCsv: (csv) => api.post('/clients/import', { csv }),
-  exportCsv: () => downloadFile('/clients/export/csv', 'clients.csv'),
+  exportCsv: () => downloadFile('/clients/export/csv', `finovatrack-clients-${new Date().toISOString().slice(0, 10)}.csv`),
+  exportFull: () => downloadFile('/clients/export/full', `finovatrack-clients-full-${new Date().toISOString().slice(0, 10)}.csv`),
   exportPipelinePdf: () => downloadFile('/clients/export/pipeline-pdf', 'pipeline-report.pdf'),
-  logContact: (id, data) => api.patch(`/clients/${id}/contact`, typeof data === 'string' ? { note: data } : data),
+  backupPreferences: () => api.get('/clients/backup/preferences'),
+  updateBackupPreferences: (data) => api.put('/clients/backup/preferences', data),
+  sendBackupNow: () => api.post('/clients/backup/send-now'),
+  logContact: (id, note) => api.patch(`/clients/${id}/contact`, { note }),
   addActivity: (id, data) => api.post(`/clients/${id}/activities`, data),
-  suggestNextAction: (id) => api.get(`/clients/${id}/suggest-next-action`),
-};
-
-export const integrationsApi = {
-  status: () => api.get('/integrations/status'),
-  crm: (params) => api.get('/integrations/crm', { params }),
-  banking: (q) => api.get('/integrations/banking', { params: { q } }),
 };
 
 export const tasksApi = {
@@ -186,23 +182,6 @@ export const dashboardApi = {
   stats: (params) => api.get('/dashboard/stats', { params }),
   updateTargets: (data) => api.put('/dashboard/targets', data),
   sendSummary: (period) => api.post('/dashboard/send-summary', { period }),
-};
-
-export const auditApi = {
-  list: (params) => api.get('/audit-log', { params }),
-};
-
-export const notificationsApi = {
-  list: () => api.get('/notifications'),
-  summary: () => api.get('/notifications/summary'),
-  dismiss: (key) => api.patch(`/notifications/dismiss/${encodeURIComponent(key)}`),
-  dismissAll: () => api.patch('/notifications/dismiss-all'),
-  preferences: () => api.get('/notifications/preferences'),
-  updatePreferences: (data) => api.put('/notifications/preferences', data),
-  pushSubscribe: (data) => api.post('/notifications/push/subscribe', data),
-  pushUnsubscribe: (data) => api.delete('/notifications/push/subscribe', { data }),
-  vapidPublicKey: () => api.get('/notifications/vapid-public-key'),
-  sendDigestNow: () => api.post('/notifications/digest/send-now'),
 };
 
 export default api;

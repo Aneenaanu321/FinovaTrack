@@ -4,9 +4,8 @@ import { format, startOfMonth, endOfMonth, subDays, startOfWeek, endOfWeek } fro
 import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import { dashboardApi, tasksApi, clientsApi } from '../services/api';
+import { dashboardApi, tasksApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { DashboardSkeleton } from '../components/ui/Skeleton';
 import { DealsByStageChart, KycChart, TasksPerWeekChart } from '../components/DashboardCharts';
 
 const PRIORITY_COLOR = { High: 'bg-red-100 text-red-700', Medium: 'bg-yellow-100 text-yellow-700', Low: 'bg-green-100 text-green-700' };
@@ -30,17 +29,24 @@ function StatCard({ label, value, color, icon, hint }) {
   );
 }
 
-function ProgressBar({ value, max, label }) {
+function formatMoney(n) {
+  return `$${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+function ProgressBar({ value, max, label, formatValue }) {
+  const displayVal = formatValue ? formatValue(value) : value;
+  const displayMax = formatValue ? formatValue(max) : max;
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : (value > 0 ? 100 : 0);
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-600">{label}</span>
-        <span className="font-medium text-gray-900">{value} / {max}</span>
+        <span className="font-medium text-gray-900">{displayVal} / {displayMax}</span>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full bg-primary-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
+      {max > 0 && <p className="text-xs text-gray-400 mt-0.5">{pct}% of goal</p>}
     </div>
   );
 }
@@ -53,10 +59,9 @@ export default function Dashboard() {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [editingTargets, setEditingTargets] = useState(false);
-  const [targetForm, setTargetForm] = useState({ clientsClosed: 5, revenue: 0 });
+  const [targetForm, setTargetForm] = useState({ clientsClosed: 5, dealValue: 0, commission: 0 });
   const [sendingSummary, setSendingSummary] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const [attentionCount, setAttentionCount] = useState(null);
   const reportRef = useRef(null);
 
   const getRangeParams = useCallback(() => {
@@ -80,7 +85,8 @@ export default function Dashboard() {
         if (r.data?.monthlyTargets) {
           setTargetForm({
             clientsClosed: r.data.monthlyTargets.clientsClosed,
-            revenue: r.data.monthlyTargets.revenue,
+            dealValue: r.data.monthlyTargets.dealValue ?? 0,
+            commission: r.data.monthlyTargets.commission ?? 0,
           });
         }
       })
@@ -89,12 +95,6 @@ export default function Dashboard() {
   }, [getRangeParams]);
 
   useEffect(() => { load(); }, [load]);
-
-  useEffect(() => {
-    clientsApi.needsAttention()
-      .then((r) => setAttentionCount(r.data?.counts?.total ?? 0))
-      .catch(() => setAttentionCount(null));
-  }, []);
 
   const completeTask = async (id) => {
     try {
@@ -175,7 +175,11 @@ export default function Dashboard() {
   };
 
   if (loading && !data) {
-    return <DashboardSkeleton />;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   const {
@@ -188,30 +192,21 @@ export default function Dashboard() {
     kyc,
     tasksCompletedPerWeek,
     monthlyTargets,
+    commissionReporting,
     focusList,
     dateRange,
   } = data || {};
 
+  const monthActual = monthlyTargets?.actual;
+  const dealsClosed = monthActual?.clientsClosed ?? 0;
+  const dealsGoal = monthlyTargets?.clientsClosed ?? 0;
+
   return (
     <div className="space-y-6 max-w-7xl">
-      {attentionCount > 0 && (
-        <Link
-          to="/attention"
-          className="card block p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 hover:border-amber-300 transition-colors"
-        >
-          <p className="font-semibold text-amber-900 dark:text-amber-100">
-            {attentionCount} item{attentionCount !== 1 ? 's' : ''} need your attention today
-          </p>
-          <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
-            Overdue tasks, follow-ups due, stale leads, and actions without a scheduled date →
-          </p>
-        </Link>
-      )}
-
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Good morning, {user?.name?.split(' ')[0]} 👋</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Good morning, {user?.name?.split(' ')[0]} 👋</h1>
+          <p className="text-gray-500 mt-1">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => sendSummary('weekly')} disabled={sendingSummary} className="btn-secondary text-sm">
@@ -262,6 +257,75 @@ export default function Dashboard() {
         )}
       </div>
 
+      <div className="card border-primary-100 bg-gradient-to-br from-primary-50/80 to-white">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          <div>
+            <h2 className="font-semibold text-gray-900">Monthly target vs. actual</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {monthlyTargets?.month} · closed deals this calendar month
+            </p>
+          </div>
+          <div className="flex items-center gap-3 sm:text-right">
+            <div>
+              <p className="text-3xl font-bold text-primary-700">{dealsClosed}</p>
+              <p className="text-xs text-gray-500">deals closed</p>
+            </div>
+            <div className="text-gray-300 text-2xl font-light">/</div>
+            <div>
+              <p className="text-3xl font-bold text-gray-400">{dealsGoal}</p>
+              <p className="text-xs text-gray-500">monthly goal</p>
+            </div>
+            {!editingTargets ? (
+              <button type="button" onClick={() => setEditingTargets(true)} className="btn-secondary text-sm ml-2">Edit goals</button>
+            ) : null}
+          </div>
+        </div>
+        {editingTargets ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div>
+              <label className="label">Deals closed goal</label>
+              <input type="number" min="0" className="input" value={targetForm.clientsClosed} onChange={(e) => setTargetForm((f) => ({ ...f, clientsClosed: Number(e.target.value) }))} />
+            </div>
+            <div>
+              <label className="label">Deal value goal ($)</label>
+              <input type="number" min="0" className="input" value={targetForm.dealValue} onChange={(e) => setTargetForm((f) => ({ ...f, dealValue: Number(e.target.value) }))} />
+            </div>
+            <div>
+              <label className="label">Commission goal ($)</label>
+              <input type="number" min="0" className="input" value={targetForm.commission} onChange={(e) => setTargetForm((f) => ({ ...f, commission: Number(e.target.value) }))} />
+            </div>
+            <div className="sm:col-span-3 flex gap-2 justify-end">
+              <button type="button" onClick={() => setEditingTargets(false)} className="btn-secondary text-sm">Cancel</button>
+              <button type="button" onClick={saveTargets} className="btn-primary text-sm">Save goals</button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <ProgressBar label="Deals closed" value={dealsClosed} max={dealsGoal || 1} />
+            <ProgressBar label="Deal value (closed)" value={monthActual?.dealValue ?? 0} max={monthlyTargets?.dealValue || 1} formatValue={formatMoney} />
+            <ProgressBar label="Commission (closed)" value={monthActual?.commission ?? 0} max={monthlyTargets?.commission || 1} formatValue={formatMoney} />
+          </div>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-primary-100/80">
+          <div className="text-center p-2 rounded-lg bg-white/70">
+            <p className="text-lg font-semibold text-gray-900">{formatMoney(monthActual?.dealValue)}</p>
+            <p className="text-xs text-gray-500">Deal value (month)</p>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-white/70">
+            <p className="text-lg font-semibold text-emerald-700">{formatMoney(monthActual?.commission)}</p>
+            <p className="text-xs text-gray-500">Commission (month)</p>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-white/70">
+            <p className="text-lg font-semibold text-gray-900">{formatMoney(commissionReporting?.openPipeline?.dealValue)}</p>
+            <p className="text-xs text-gray-500">Open pipeline value</p>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-white/70">
+            <p className="text-lg font-semibold text-emerald-700">{formatMoney(commissionReporting?.openPipeline?.commission)}</p>
+            <p className="text-xs text-gray-500">Expected commission (open)</p>
+          </div>
+        </div>
+      </div>
+
       <div ref={reportRef} className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Total Clients" value={stats?.totalClients ?? 0} color="bg-blue-50" hint="All active" icon={<svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
@@ -285,50 +349,77 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {commissionReporting && (
           <div className="card">
-            <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900 mb-1">Commission & deal value</h2>
+            <p className="text-xs text-gray-500 mb-4">Selected range: {rangeLabel()}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h2 className="font-semibold text-gray-900">Monthly targets</h2>
-                <p className="text-xs text-gray-500">{monthlyTargets?.month}</p>
-              </div>
-              {!editingTargets ? (
-                <button type="button" onClick={() => setEditingTargets(true)} className="text-sm text-primary-600 hover:underline">Edit</button>
-              ) : (
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setEditingTargets(false)} className="text-sm text-gray-500">Cancel</button>
-                  <button type="button" onClick={saveTargets} className="text-sm text-primary-600 font-medium">Save</button>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Closed in range</h3>
+                <div className="flex gap-4 mb-3">
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{commissionReporting.closedInRange.count}</p>
+                    <p className="text-xs text-gray-500">deals</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{formatMoney(commissionReporting.closedInRange.dealValue)}</p>
+                    <p className="text-xs text-gray-500">deal value</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-emerald-700">{formatMoney(commissionReporting.closedInRange.commission)}</p>
+                    <p className="text-xs text-gray-500">commission</p>
+                  </div>
                 </div>
-              )}
+                {commissionReporting.closedInRange.deals?.length > 0 ? (
+                  <ul className="space-y-1 text-sm">
+                    {commissionReporting.closedInRange.deals.map((d) => (
+                      <li key={d._id} className="flex justify-between gap-2 py-1 border-b border-gray-50 last:border-0">
+                        <Link to={`/clients/${d._id}`} className="text-primary-600 hover:underline truncate">{d.name}</Link>
+                        <span className="text-gray-500 whitespace-nowrap text-xs">
+                          {formatMoney(d.dealValue)}
+                          {d.expectedCommission > 0 && <span className="text-emerald-600 ml-1">· {formatMoney(d.expectedCommission)} comm.</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-400">No closed deals in this range</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Open pipeline</h3>
+                <div className="flex gap-4 mb-3">
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{commissionReporting.openPipeline.count}</p>
+                    <p className="text-xs text-gray-500">active deals</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">{formatMoney(commissionReporting.openPipeline.dealValue)}</p>
+                    <p className="text-xs text-gray-500">deal value</p>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-emerald-700">{formatMoney(commissionReporting.openPipeline.commission)}</p>
+                    <p className="text-xs text-gray-500">expected commission</p>
+                  </div>
+                </div>
+                <ul className="space-y-1 text-sm">
+                  {commissionReporting.openPipeline.byStage?.map((row) => (
+                    <li key={row.stage} className="flex justify-between py-1 text-gray-600">
+                      <span>{row.stage} ({row.count})</span>
+                      <span className="text-xs">
+                        {formatMoney(row.dealValue)}
+                        {row.commission > 0 && <span className="text-emerald-600 ml-1">· {formatMoney(row.commission)}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            {editingTargets ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="label">Clients closed target</label>
-                  <input type="number" min="0" className="input" value={targetForm.clientsClosed} onChange={(e) => setTargetForm((f) => ({ ...f, clientsClosed: Number(e.target.value) }))} />
-                </div>
-                <div>
-                  <label className="label">Revenue target</label>
-                  <input type="number" min="0" className="input" value={targetForm.revenue} onChange={(e) => setTargetForm((f) => ({ ...f, revenue: Number(e.target.value) }))} />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <ProgressBar
-                  label="Clients closed"
-                  value={monthlyTargets?.actual?.clientsClosed ?? 0}
-                  max={monthlyTargets?.clientsClosed ?? 1}
-                />
-                <ProgressBar
-                  label={`Revenue (${monthlyTargets?.actual?.revenue?.toLocaleString() ?? 0})`}
-                  value={monthlyTargets?.actual?.revenue ?? 0}
-                  max={monthlyTargets?.revenue || monthlyTargets?.actual?.revenue || 1}
-                />
-              </div>
-            )}
           </div>
+        )}
 
-          <div className="card">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="card lg:col-span-2">
             <h2 className="font-semibold text-gray-900 mb-4">Focus list — contact today</h2>
             {focusList?.length === 0 ? (
               <p className="text-sm text-gray-400 py-4 text-center">No priority clients flagged</p>

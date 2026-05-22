@@ -21,8 +21,6 @@ export const KYC_COLOR = {
   Completed: 'bg-green-100 text-green-700',
 };
 
-import { emptyConsents, emptyInteractionFlags, consentsToForm, interactionFlagsToForm } from './compliance';
-
 export const emptyClientForm = {
   name: '',
   phone: '',
@@ -37,9 +35,6 @@ export const emptyClientForm = {
   kycDocuments: { id: false, addressProof: false, income: false },
   dealStatus: 'New',
   nextAction: '',
-  nextFollowUpDate: '',
-  consents: emptyConsents(),
-  interactionFlags: emptyInteractionFlags(),
 };
 
 export function clientToForm(c) {
@@ -57,9 +52,6 @@ export function clientToForm(c) {
     kycDocuments: { id: false, addressProof: false, income: false, ...c.kycDocuments },
     dealStatus: c.dealStatus,
     nextAction: c.nextAction || '',
-    nextFollowUpDate: c.nextFollowUpDate ? c.nextFollowUpDate.slice(0, 10) : '',
-    consents: consentsToForm(c.consents),
-    interactionFlags: interactionFlagsToForm(c.interactionFlags),
   };
 }
 
