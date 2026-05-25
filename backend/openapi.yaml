@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: FinovaTrack API
+  version: 1.0.0
+  description: Bank sales productivity API — clients, tasks, appointments, dashboard.
+servers:
+  - url: http://localhost:5000/api
+    description: Local development
+tags:
+  - name: Auth
+  - name: Clients
+  - name: Tasks
+  - name: Health
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: API and database status
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '201': { description: Created with token and user }
+        '400': { description: Validation error }
+        '409': { description: Email already registered }
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Tokens and user }
+        '401': { description: Invalid credentials }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: User profile }
+        '401': { description: Unauthorized }
+  /clients:
+    get:
+      tags: [Clients]
+      summary: List clients
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: dealStatus
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Client list }
+    post:
+      tags: [Clients]
+      summary: Create client
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                dealStatus: { type: string, enum: [New, Contacted, Interested, Closed] }
+      responses:
+        '201': { description: Client created }
+        '409': { description: Duplicate email or phone }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

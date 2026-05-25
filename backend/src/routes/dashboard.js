@@ -3,8 +3,10 @@ const Task = require('../models/Task');
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { asyncHandler } = require('../middleware/errors');
 const { buildReportData, formatSummaryText } = require('../utils/dashboardReport');
 const { sendDashboardSummaryEmail } = require('../utils/email');
+const { buildCommissionCsv } = require('../utils/dataExport');
 
 const router = express.Router();
 router.use(auth);
@@ -41,6 +43,17 @@ async function getTodayLists(userId) {
 
   return { todayTasks, todayAppointments, upcomingAppointments };
 }
+
+router.get('/commission-export/csv', asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select('monthlyTargets');
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  const report = await buildReportData(req.user.id, req.query, user.monthlyTargets);
+  const csv = buildCommissionCsv(report.commissionReporting, report.dateRange);
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="finovatrack-commission-${date}.csv"`);
+  res.send(csv);
+}));
 
 router.get('/stats', async (req, res) => {
   try {

@@ -3,8 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import AppLogo from './AppLogo';
 
 const nav = [
-  { to: '/', label: 'Dashboard', icon: HomeIcon },
   { to: '/attention', label: 'Today', icon: AttentionIcon },
+  { to: '/dashboard', label: 'Dashboard', icon: HomeIcon },
   { to: '/clients', label: 'Clients', icon: UsersIcon },
   { to: '/pipeline', label: 'Pipeline', icon: PipelineIcon },
   { to: '/tasks', label: 'Tasks', icon: CheckIcon },
@@ -86,11 +86,11 @@ export default function Sidebar({ open, onClose }) {
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="px-4 py-5 border-b border-gray-100 dark:border-gray-800">
-          <AppLogo size="md" to="/" subtitle="Sales tracker" />
+          <AppLogo size="md" to="/attention" subtitle="Sales tracker" />
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {nav.map(({ to, label, icon: Icon }) => {
-            const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+            const active = location.pathname === to || location.pathname.startsWith(`${to}/`);
             return (
               <NavLink
                 key={to}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { clientsApi } from '../services/api';
+import { clientsApi, parseClientList } from '../services/api';
 import { downloadClientsCsv, downloadClientsExcel } from '../utils/clientExport';
 import Modal from '../components/Modal';
 import ClientImportModal from '../components/ClientImportModal';
@@ -28,11 +28,20 @@ export default function Clients() {
   const [saving, setSaving] = useState(false);
   const [dupWarning, setDupWarning] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 12;
 
   const load = () => {
     setLoading(true);
-    clientsApi.list({ search, ...filters })
-      .then((r) => setClients(r.data))
+    clientsApi.list({ search, ...filters, page, limit: PAGE_SIZE })
+      .then((r) => {
+        const parsed = parseClientList(r.data);
+        setClients(parsed.clients);
+        setTotal(parsed.total);
+        setTotalPages(parsed.pages);
+      })
       .catch(() => toast.error('Failed to load clients'))
       .finally(() => setLoading(false));
   };
@@ -43,7 +52,8 @@ export default function Clients() {
       .catch(() => toast.error('Failed to load archived clients'));
   };
 
-  useEffect(() => { load(); }, [search, filters]);
+  useEffect(() => { setPage(1); }, [search, filters.dealStatus, filters.kycStatus]);
+  useEffect(() => { load(); }, [search, filters, page]);
 
   const openAdd = () => { setForm(emptyClientForm); setEditing(null); setDupWarning(null); setModal(true); };
   const openEdit = (c) => { setForm(clientToForm(c)); setEditing(c._id); setDupWarning(null); setModal(true); };
@@ -77,7 +87,7 @@ export default function Clients() {
   };
 
   const remove = async (id) => {
-    if (!confirm('Archive this client? You can restore them from the trash.')) return;
+    if (!confirm('Archive this client? Linked tasks will be unlinked and upcoming appointments cancelled. You can restore from trash.')) return;
     try { await clientsApi.delete(id); toast.success('Client archived'); load(); }
     catch { toast.error('Failed to archive'); }
   };
@@ -201,6 +211,17 @@ export default function Clients() {
               </div>
             );
           })}
+        </div>
+      )}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between card p-3">
+          <p className="text-sm text-gray-500">
+            Page {page} of {totalPages} · {total} client{total === 1 ? '' : 's'}
+          </p>
+          <div className="flex gap-2">
+            <button type="button" className="btn-secondary text-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
+            <button type="button" className="btn-secondary text-sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
+          </div>
         </div>
       )}
 

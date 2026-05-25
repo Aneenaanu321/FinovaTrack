@@ -109,8 +109,8 @@ export const authApi = {
 
 export { persistSession, clearSession };
 
-async function downloadFile(path, filename) {
-  const res = await api.get(path, { responseType: 'blob' });
+async function downloadFile(path, filename, params) {
+  const res = await api.get(path, { responseType: 'blob', params });
   const url = URL.createObjectURL(res.data);
   const a = document.createElement('a');
   a.href = url;
@@ -143,6 +143,7 @@ export const clientsApi = {
 
 export const tasksApi = {
   list: (params) => api.get('/tasks', { params }),
+  exportCsv: () => downloadFile('/tasks/export/csv', `finovatrack-tasks-${new Date().toISOString().slice(0, 10)}.csv`),
   templates: () => api.get('/tasks/templates'),
   create: (data) => api.post('/tasks', data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
@@ -170,6 +171,7 @@ export function parseClientList(data) {
 
 export const appointmentsApi = {
   list: (params) => api.get('/appointments', { params }),
+  exportCsv: () => downloadFile('/appointments/export/csv', `finovatrack-appointments-${new Date().toISOString().slice(0, 10)}.csv`),
   create: (data) => api.post('/appointments', data),
   update: (id, data) => api.put(`/appointments/${id}`, data),
   delete: (id) => api.delete(`/appointments/${id}`),
@@ -182,6 +184,34 @@ export const dashboardApi = {
   stats: (params) => api.get('/dashboard/stats', { params }),
   updateTargets: (data) => api.put('/dashboard/targets', data),
   sendSummary: (period) => api.post('/dashboard/send-summary', { period }),
+  exportCommissionCsv: (params) => downloadFile(
+    '/dashboard/commission-export/csv',
+    `finovatrack-commission-${new Date().toISOString().slice(0, 10)}.csv`,
+    params
+  ),
+};
+
+export const notificationsApi = {
+  list: () => api.get('/notifications'),
+  summary: () => api.get('/notifications/summary'),
+  dismiss: (key) => api.patch(`/notifications/dismiss/${encodeURIComponent(key)}`),
+  dismissAll: () => api.patch('/notifications/dismiss-all'),
+  preferences: () => api.get('/notifications/preferences'),
+  updatePreferences: (data) => api.put('/notifications/preferences', data),
+  sendDigestNow: () => api.post('/notifications/digest/send-now'),
+  vapidPublicKey: () => api.get('/notifications/vapid-public-key'),
+  pushSubscribe: (data) => api.post('/notifications/push/subscribe', data),
+  pushUnsubscribe: (data) => api.delete('/notifications/push/subscribe', { data }),
+};
+
+export const auditApi = {
+  list: (params) => api.get('/audit-log', { params }),
+};
+
+export const integrationsApi = {
+  status: () => api.get('/integrations/status'),
+  crm: (params) => api.get('/integrations/crm', { params }),
+  banking: (q) => api.get('/integrations/banking', { params: { q } }),
 };
 
 export default api;

@@ -1,0 +1,24 @@
+# Render Blueprint — import in Dashboard → New → Blueprint
+# Or copy these settings into your Web Service manually.
+services:
+  - type: web
+    name: finovatrack-api
+    runtime: node
+    region: oregon
+    plan: free
+    # Use the branch you deploy from (main or your feature branch)
+    branch: main
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # Do NOT set PORT — Render injects it automatically

@@ -2,11 +2,24 @@ const express = require('express');
 const Appointment = require('../models/Appointment');
 const Client = require('../models/Client');
 const auth = require('../middleware/auth');
+const { asyncHandler, AppError } = require('../middleware/errors');
+const { validate } = require('../middleware/validate');
+const { appointmentCreateSchema } = require('../validation/schemas');
+const { buildAppointmentsCsvForUser } = require('../utils/dataExport');
 const { appointmentToEvent, toIcsEvent, googleCalendarUrl, outlookCalendarUrl } = require('../utils/calendarLinks');
 const { recordAudit } = require('../utils/audit');
 
 const router = express.Router();
 router.use(auth);
+
+router.get('/export/csv', asyncHandler(async (req, res) => {
+  const { csv, count } = await buildAppointmentsCsvForUser(req.user.id);
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="finovatrack-appointments-${date}.csv"`);
+  res.setHeader('X-Export-Count', String(count));
+  res.send(csv);
+}));
 
 const ALLOWED_UPDATE = ['client', 'dateTime', 'durationMinutes', 'type', 'location', 'notes', 'status', 'remindEmail', 'remindSms'];
 
@@ -108,35 +121,29 @@ router.get('/:id/ics', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  try {
-    const { client, dateTime, type, location, notes, durationMinutes, remindEmail, remindSms } = req.body;
-    if (!client || !dateTime)
-      return res.status(400).json({ message: 'Client and dateTime are required' });
-    const appointment = await Appointment.create({
-      user: req.user.id,
-      client,
-      dateTime,
-      type,
-      location,
-      notes,
-      durationMinutes,
-      remindEmail: remindEmail !== false,
-      remindSms: !!remindSms,
-    });
-    await appointment.populate('client', 'name phone email dealStatus');
-    await recordAudit(req, {
-      action: 'create',
-      entityType: 'appointment',
-      entityId: appointment._id,
-      entityLabel: appointment.client?.name || 'Appointment',
-      changes: [{ field: 'dateTime', from: null, to: appointment.dateTime }],
-    });
-    res.status(201).json(appointment);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/', validate(appointmentCreateSchema), asyncHandler(async (req, res) => {
+  const { client, dateTime, type, location, notes, durationMinutes, remindEmail, remindSms } = req.validated.body;
+  const appointment = await Appointment.create({
+    user: req.user.id,
+    client,
+    dateTime,
+    type: type || 'In-Person',
+    location,
+    notes,
+    durationMinutes,
+    remindEmail: remindEmail !== false,
+    remindSms: !!remindSms,
+  });
+  await appointment.populate('client', 'name phone email dealStatus');
+  await recordAudit(req, {
+    action: 'create',
+    entityType: 'appointment',
+    entityId: appointment._id,
+    entityLabel: appointment.client?.name || 'Appointment',
+    changes: [{ field: 'dateTime', from: null, to: appointment.dateTime }],
+  });
+  res.status(201).json(appointment);
+}));
 
 async function applyClientFollowUp(userId, clientId, { nextFollowUpDate, nextAction, note }) {
   if (!clientId) return null;

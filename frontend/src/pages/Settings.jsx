@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { authApi, notificationsApi, auditApi, clientsApi } from '../services/api';
+import { authApi, notificationsApi, auditApi, clientsApi, tasksApi, appointmentsApi } from '../services/api';
+import { useAppConfig } from '../context/AppConfigContext';
 import { downloadClientsCsv, downloadClientsExcel } from '../utils/clientExport';
 import PasswordHints from '../components/PasswordHints';
 import { validatePasswordForm } from '../utils/validation';
@@ -10,6 +11,7 @@ import { subscribeToPush, unsubscribeFromPush } from '../utils/push';
 
 export default function Settings() {
   const { user, updateUser } = useAuth();
+  const { emailNotificationsAvailable } = useAppConfig();
   const [profile, setProfile] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -269,6 +271,42 @@ export default function Settings() {
           >
             Export all (Excel)
           </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={exportingData}
+            onClick={async () => {
+              setExportingData(true);
+              try {
+                await tasksApi.exportCsv();
+                toast.success('Tasks exported (CSV)');
+              } catch {
+                toast.error('Export failed');
+              } finally {
+                setExportingData(false);
+              }
+            }}
+          >
+            Export tasks (CSV)
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={exportingData}
+            onClick={async () => {
+              setExportingData(true);
+              try {
+                await appointmentsApi.exportCsv();
+                toast.success('Appointments exported (CSV)');
+              } catch {
+                toast.error('Export failed');
+              } finally {
+                setExportingData(false);
+              }
+            }}
+          >
+            Export appointments (CSV)
+          </button>
         </div>
         <form onSubmit={saveBackupPrefs} className="space-y-4 border-t border-gray-100 dark:border-gray-800 pt-4">
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -325,6 +363,11 @@ export default function Settings() {
 
       <section className="card p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Notifications</h2>
+        {!emailNotificationsAvailable && (
+          <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
+            Email is not configured on the server (SMTP). Digest and backup emails will not send until you set SMTP in the backend environment.
+          </p>
+        )}
         <form onSubmit={saveNotifPrefs} className="space-y-4">
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input

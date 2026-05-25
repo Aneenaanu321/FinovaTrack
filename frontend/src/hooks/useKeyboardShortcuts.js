@@ -24,7 +24,8 @@ export default function useKeyboardShortcuts({ onSearch, onHelp }) {
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
 
       const routes = {
-        d: '/',
+        d: '/dashboard',
+        n: '/attention',
         c: '/clients',
         p: '/pipeline',
         t: '/tasks',

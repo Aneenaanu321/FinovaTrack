@@ -1,8 +1,13 @@
 const express = require('express');
 const Client = require('../models/Client');
+const Task = require('../models/Task');
+const Appointment = require('../models/Appointment');
 const User = require('../models/User');
+const { asyncHandler, AppError } = require('../middleware/errors');
 const { STALE_LEAD_DAYS } = require('../models/Client');
 const auth = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
+const { clientCreateSchema } = require('../validation/schemas');
 const {
   pickClientData,
   findDuplicates,
@@ -320,17 +325,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  try {
-    const data = pickClientData(req.body);
-    if (!data.name) return res.status(400).json({ message: 'Name is required' });
+router.post('/', validate(clientCreateSchema), asyncHandler(async (req, res) => {
+    const data = pickClientData(req.validated.body);
 
     const duplicates = await findDuplicates(req.user.id, data);
     if (duplicates.length) {
-      return res.status(409).json({
-        message: 'A client with this email or phone already exists',
-        duplicates,
-      });
+      throw new AppError('A client with this email or phone already exists', 409, duplicates);
     }
 
     const client = await Client.create({ user: req.user.id, ...data });
@@ -339,10 +339,7 @@ router.post('/', async (req, res) => {
       await client.save();
     }
     res.status(201).json(client);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+}));
 
 router.get('/:id', async (req, res) => {
   try {
@@ -379,19 +376,28 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
-  try {
-    const client = await Client.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id, deletedAt: null },
-      { deletedAt: new Date() },
-      { new: true }
-    );
-    if (!client) return res.status(404).json({ message: 'Client not found' });
-    res.json({ message: 'Client archived', client });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const client = await Client.findOneAndUpdate(
+    { _id: req.params.id, user: req.user.id, deletedAt: null },
+    { deletedAt: new Date() },
+    { new: true }
+  );
+  if (!client) throw new AppError('Client not found', 404);
+
+  await Task.updateMany(
+    { user: req.user.id, client: client._id },
+    { $set: { client: null } }
+  );
+  await Appointment.updateMany(
+    { user: req.user.id, client: client._id, status: 'Upcoming' },
+    { $set: { status: 'Cancelled' } }
+  );
+
+  res.json({
+    message: 'Client archived. Linked tasks were unlinked; upcoming appointments were cancelled.',
+    client,
+  });
+}));
 
 router.post('/:id/restore', async (req, res) => {
   try {

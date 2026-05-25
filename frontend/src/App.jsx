@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AppConfigProvider, useAppConfig } from './context/AppConfigContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -23,19 +24,23 @@ function PrivateRoute({ children }) {
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
-  return !user ? children : <Navigate to="/" replace />;
+  const { defaultHomeRoute, loaded: configLoaded } = useAppConfig();
+  if (loading || !configLoaded) return null;
+  const home = defaultHomeRoute || '/attention';
+  return !user ? children : <Navigate to={home} replace />;
 }
 
 export default function App() {
   return (
+    <AppConfigProvider>
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Navigate to="/attention" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="attention" element={<NeedsAttention />} />
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
@@ -48,5 +53,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
+    </AppConfigProvider>
   );
 }

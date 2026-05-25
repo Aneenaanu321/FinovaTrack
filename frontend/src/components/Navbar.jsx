@@ -59,7 +59,7 @@ export default function Navbar({ onMenuClick, onSearchClick, onHelpClick }) {
         </button>
 
         <div className="md:hidden flex-shrink-0">
-          <AppLogo size="sm" to="/" className="gap-2" />
+          <AppLogo size="sm" to="/attention" className="gap-2" />
         </div>
 
         <button
