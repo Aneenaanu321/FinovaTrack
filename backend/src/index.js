@@ -9,8 +9,12 @@ const { startWeeklyBackupJob } = require('./jobs/weeklyBackup');
 validateEnv();
 
 const app = createApp();
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/finovatrack';
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/finovatrack')
+console.log('[startup] NODE_ENV=%s PORT=%s', process.env.NODE_ENV, process.env.PORT || '5000');
+
+mongoose
+  .connect(mongoUri, { serverSelectionTimeoutMS: 30000 })
   .then(() => {
     console.log('MongoDB connected');
     const PORT = process.env.PORT || 5000;
@@ -25,7 +29,12 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/finovatra
     });
   })
   .catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.error('[startup] MongoDB connection failed:', err.message);
+    if (err.message?.includes('querySrv')) {
+      console.error(
+        '[startup] Tip: use the standard (non-SRV) Atlas connection string, or check Atlas Network Access allows 0.0.0.0/0'
+      );
+    }
     process.exit(1);
   });
 

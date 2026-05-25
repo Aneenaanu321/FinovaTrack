@@ -68,11 +68,64 @@ cd ../frontend && npm ci && npm run build
 # Serve dist with nginx — proxy /api to localhost:5000
 ```
 
-## Netlify / Vercel (frontend only)
+## Vercel (frontend) + Render (backend) — recommended split
+
+### 1. Deploy backend on Render
+
+1. [render.com](https://render.com) → **New** → **Web Service** → connect your GitHub repo.
+2. **Branch:** `feat/followups-integrations-audit` (or merge to `main` first — must match the branch that has the latest `backend/` code).
+3. **Root directory:** `backend` (required — not repo root).
+4. **Build command:** `npm ci`
+5. **Start command:** `npm start`
+5. **Environment variables:**
+
+| Key | Value |
+|-----|--------|
+| `MONGODB_URI` | Your Atlas URI (`mongodb+srv://.../finovatrack?...`) |
+| `JWT_SECRET` | 32+ random characters |
+| `FRONTEND_URL` | `https://YOUR-APP.vercel.app` (set after Vercel deploy, then update) |
+| `NODE_ENV` | `production` |
+| `PORT` | Leave empty — Render sets this automatically |
+
+6. Deploy. Copy the service URL, e.g. `https://finovatrack-api.onrender.com`.
+7. Test: open `https://YOUR-RENDER-URL.onrender.com/api/health` → should show `"status":"ok"`.
+
+#### Render deploy failed / 404 on `/api/health`
+
+| Symptom | Fix |
+|---------|-----|
+| Build fails `npm ci` | Ensure `backend/package-lock.json` is committed; **Root directory** = `backend` |
+| Crash: `MONGODB_URI is required` | Add `MONGODB_URI` and `JWT_SECRET` in Render **Environment** |
+| Crash: `MongoDB connection error` | Atlas → **Network Access** → Add IP `0.0.0.0/0`; verify password (`@` → `%40` in URI); use database name `/finovatrack` |
+| `querySrv` errors | On Render, `mongodb+srv://...` usually works; if not, paste the **standard** connection string from Atlas (Connect → Drivers) |
+| 404 Not Found | Service not running — open **Logs** tab; wrong branch or root directory; redeploy after fixing env |
+| Do not set `PORT` | Render sets `PORT` automatically — leave it unset |
+
+**Logs:** Render dashboard → your service → **Logs** → look for `[startup]` or `Environment validation failed`.
+
+### 2. Deploy frontend on Vercel
+
+1. [vercel.com](https://vercel.com) → **Add New** → **Project** → import the same repo.
+2. **Root directory:** `frontend`
+3. **Framework preset:** Vite (auto-detected)
+4. **Build command:** `npm run build` (default)
+5. **Output directory:** `dist` (default)
+6. Edit `frontend/vercel.json` — replace `REPLACE-WITH-YOUR-RENDER-URL` with your Render hostname (no trailing slash), e.g. `finovatrack-api.onrender.com`.
+7. Deploy. Note your Vercel URL, e.g. `https://finovatrack.vercel.app`.
+8. Back on **Render** → Environment → set `FRONTEND_URL` to that exact Vercel URL → **Save** (redeploy if needed).
+
+### 3. Verify
+
+- Open Vercel URL → login/register should work.
+- Browser devtools → Network → API calls go to `your-app.vercel.app/api/...` (proxied to Render).
+
+**Alternative:** set Vercel env `VITE_API_BASE_URL=https://your-app.onrender.com/api` and use direct API calls (CORS must match `FRONTEND_URL` on Render).
+
+## Netlify (frontend only)
 
 1. Build command: `cd frontend && npm ci && npm run build`
 2. Publish directory: `frontend/dist`
-3. Add redirect/proxy for `/api/*` → your backend URL, or set axios `baseURL` to the API host.
+3. Add redirect/proxy for `/api/*` → your backend URL, or set `VITE_API_BASE_URL` to the Render API host.
 
 ## Error logging (Sentry)
 
