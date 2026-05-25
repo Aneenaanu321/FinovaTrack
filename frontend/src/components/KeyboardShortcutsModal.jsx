@@ -3,6 +3,7 @@ import Modal from './Modal';
 const shortcuts = [
   { keys: ['Ctrl', 'K'], label: 'Open global search' },
   { keys: ['?'], label: 'Show keyboard shortcuts' },
+  { keys: ['N'], label: 'Go to Today' },
   { keys: ['D'], label: 'Go to Dashboard' },
   { keys: ['C'], label: 'Go to Clients' },
   { keys: ['P'], label: 'Go to Pipeline' },

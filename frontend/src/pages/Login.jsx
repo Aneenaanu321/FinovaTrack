@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { useAppConfig } from '../context/AppConfigContext';
 import AuthPageShell from '../components/AuthPageShell';
 import PasswordHints from '../components/PasswordHints';
 import { validatePasswordStrength } from '../constants/password';
 
 export default function Login() {
   const { login, register } = useAuth();
+  const { allowRegistration } = useAppConfig();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -71,12 +73,21 @@ export default function Login() {
           {loading ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
         </button>
       </form>
-      <p className="text-sm text-center text-gray-500 dark:text-gray-400 mt-6">
-        {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-        <button type="button" className="text-primary-600 font-medium hover:underline" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
-          {mode === 'login' ? 'Register' : 'Sign In'}
-        </button>
-      </p>
+      {allowRegistration ? (
+        <p className="text-sm text-center text-gray-500 dark:text-gray-400 mt-6">
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button type="button" className="text-primary-600 font-medium hover:underline" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+            {mode === 'login' ? 'Register' : 'Sign In'}
+          </button>
+        </p>
+      ) : mode === 'register' ? (
+        <p className="text-sm text-center text-amber-700 dark:text-amber-400 mt-6">
+          Registration is disabled on this server.{' '}
+          <button type="button" className="text-primary-600 font-medium hover:underline" onClick={() => setMode('login')}>
+            Sign in
+          </button>
+        </p>
+      ) : null}
     </AuthPageShell>
   );
 }

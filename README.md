@@ -11,6 +11,8 @@ A personal productivity web application for bank sales employees to track client
 - **Progress Tracking** — Visual deal pipeline progress per client
 - **Authentication** — JWT access tokens (15m) with refresh tokens, forgot/reset password, profile settings
 
+**Solo user?** See [docs/SOLO_SETUP.md](docs/SOLO_SETUP.md) for one-account setup, `ALLOW_REGISTRATION`, backups, and local Mongo.
+
 ## Tech Stack
 
 | Layer | Tech |
@@ -133,6 +135,45 @@ npm run seed
 
 Password reset links are printed to the backend console when SMTP is not configured (see `.env.example` for optional SMTP settings).
 
+### API documentation
+
+With the backend running, open [http://localhost:5000/api/docs](http://localhost:5000/api/docs) for interactive Swagger UI.
+
+### Tests & quality
+
+```bash
+cd backend && npm test && npm run lint
+cd frontend && npm run build && npm run lint && npm run test:e2e
+```
+
+CI runs the same checks via GitHub Actions (`.github/workflows/ci.yml`).
+
+### Docker (full stack)
+
+```bash
+docker compose up --build
+```
+
+See [docs/DEPLOY.md](docs/DEPLOY.md) for Railway, Render, Netlify, VPS, and Sentry setup.
+
+### Commit lockfiles
+
+Commit `backend/package-lock.json` and `frontend/package-lock.json` so installs are reproducible in CI and production:
+
+```bash
+git add backend/package-lock.json frontend/package-lock.json
+```
+
+## Troubleshooting MongoDB on Windows (`querySrv` / DNS)
+
+If `npm run dev` fails with `querySrv ECONNREFUSED`, `ENOTFOUND`, or DNS errors when using a MongoDB Atlas `mongodb+srv://` URI:
+
+1. **Use a standard connection string** — In Atlas → Connect → Drivers, choose the non-SRV URI (`mongodb://host1,host2,...`) instead of `mongodb+srv://`.
+2. **Check network** — Corporate VPN/firewall often blocks SRV DNS lookups; try another network or mobile hotspot.
+3. **Flush DNS** — `ipconfig /flushdns` in an elevated Command Prompt.
+4. **Local MongoDB for dev** — Install [MongoDB Community](https://www.mongodb.com/try/download/community) or run `docker run -d -p 27017:27017 mongo:7` and set `MONGODB_URI=mongodb://localhost:27017/finovatrack` in `backend/.env`.
+5. **Node DNS order** — Try `set NODE_OPTIONS=--dns-result-order=ipv4first` before starting the server on some Windows setups.
+
 ## Environment variables & secrets
 
 - **Do not commit** `backend/.env` or any file containing real secrets. The repo `.gitignore` excludes `.env`.
@@ -150,47 +191,4 @@ See [docs/SECURITY.md](docs/SECURITY.md) for password policy, rate limiting, aud
 
 ## Deployment
 
-### Option 1: Railway (recommended)
-
-1. Push to GitHub
-2. Create a Railway project, add MongoDB plugin
-3. Deploy backend service (set env vars from `.env.example`)
-4. Deploy frontend: `npm run build`, serve `dist/` via Railway or Netlify
-
-### Option 2: Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  mongo:
-    image: mongo:7
-    volumes: [mongo_data:/data/db]
-  backend:
-    build: ./backend
-    environment:
-      MONGODB_URI: mongodb://mongo:27017/finovatrack
-      JWT_SECRET: changeme
-    ports: ["5000:5000"]
-  frontend:
-    build: ./frontend
-    ports: ["80:80"]
-volumes:
-  mongo_data:
-```
-
-### Option 3: VPS (Ubuntu)
-
-```bash
-# Install MongoDB
-sudo apt install -y mongodb
-sudo systemctl enable --now mongod
-
-# Backend (PM2)
-cd backend && npm install
-npm install -g pm2
-pm2 start src/index.js --name finovatrack-api
-
-# Frontend (Nginx)
-cd frontend && npm run build
-sudo cp -r dist/* /var/www/html/
-```
+See **[docs/DEPLOY.md](docs/DEPLOY.md)** for Railway, Render, Netlify/Vercel, VPS, Docker Compose, and Sentry.

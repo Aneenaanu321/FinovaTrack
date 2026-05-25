@@ -1,0 +1,14 @@
+# Local-only MongoDB for solo / privacy use (no cloud Atlas).
+# Usage: docker compose -f docker-compose.local.yml up -d
+# Then set backend/.env: MONGODB_URI=mongodb://localhost:27017/finovatrack
+
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - '27017:27017'
+    volumes:
+      - finovatrack_mongo_local:/data/db
+
+volumes:
+  finovatrack_mongo_local:

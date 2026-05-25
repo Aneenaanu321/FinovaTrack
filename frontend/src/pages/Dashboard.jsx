@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [targetForm, setTargetForm] = useState({ clientsClosed: 5, dealValue: 0, commission: 0 });
   const [sendingSummary, setSendingSummary] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingCommission, setExportingCommission] = useState(false);
   const reportRef = useRef(null);
 
   const getRangeParams = useCallback(() => {
@@ -134,7 +135,6 @@ export default function Dashboard() {
     setExportingPdf(true);
     try {
       const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true });
-      const img = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
@@ -351,7 +351,32 @@ export default function Dashboard() {
 
         {commissionReporting && (
           <div className="card">
-            <h2 className="font-semibold text-gray-900 mb-1">Commission & deal value</h2>
+            <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
+              <h2 className="font-semibold text-gray-900">Commission & deal value</h2>
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                disabled={exportingCommission}
+                onClick={async () => {
+                  const params = getRangeParams();
+                  if (!params) {
+                    toast.error('Select a date range first');
+                    return;
+                  }
+                  setExportingCommission(true);
+                  try {
+                    await dashboardApi.exportCommissionCsv(params);
+                    toast.success('Commission report downloaded');
+                  } catch {
+                    toast.error('Export failed');
+                  } finally {
+                    setExportingCommission(false);
+                  }
+                }}
+              >
+                {exportingCommission ? 'Exporting…' : 'Export CSV'}
+              </button>
+            </div>
             <p className="text-xs text-gray-500 mb-4">Selected range: {rangeLabel()}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

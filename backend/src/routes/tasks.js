@@ -1,12 +1,25 @@
 const express = require('express');
 const Task = require('../models/Task');
 const auth = require('../middleware/auth');
+const { asyncHandler } = require('../middleware/errors');
+const { validate } = require('../middleware/validate');
+const { taskCreateSchema } = require('../validation/schemas');
 const { TASK_TEMPLATES } = require('../constants/taskTemplates');
 const { nextDueDate } = require('../utils/recurring');
 const { recordAudit } = require('../utils/audit');
+const { buildTasksCsvForUser } = require('../utils/dataExport');
 
 const router = express.Router();
 router.use(auth);
+
+router.get('/export/csv', asyncHandler(async (req, res) => {
+  const { csv, count } = await buildTasksCsvForUser(req.user.id);
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="finovatrack-tasks-${date}.csv"`);
+  res.setHeader('X-Export-Count', String(count));
+  res.send(csv);
+}));
 
 const SORT_FIELDS = {
   dueDate: 'dueDate',
@@ -151,39 +164,34 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  try {
-    const {
-      title, description, dueDate, priority, status, client,
-      recurringFrequency, emailReminderEnabled, emailReminderHoursBefore, browserReminderEnabled,
-    } = req.body;
-    if (!title) return res.status(400).json({ message: 'Title is required' });
-    const task = await Task.create({
-      user: req.user.id,
-      title,
-      description,
-      dueDate,
-      priority,
-      status,
-      client: client || null,
-      recurringFrequency: recurringFrequency || null,
-      emailReminderEnabled: !!emailReminderEnabled,
-      emailReminderHoursBefore: emailReminderHoursBefore ?? 24,
-      browserReminderEnabled: !!browserReminderEnabled,
-    });
-    await task.populate('client', 'name');
-    await recordAudit(req, {
-      action: 'create',
-      entityType: 'task',
-      entityId: task._id,
-      entityLabel: task.title,
-      changes: [{ field: 'title', from: null, to: task.title }],
-    });
-    res.status(201).json(task);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/', validate(taskCreateSchema), asyncHandler(async (req, res) => {
+  const {
+    title, description, dueDate, priority, status, client,
+    recurringFrequency, emailReminderEnabled, emailReminderHoursBefore, browserReminderEnabled,
+  } = req.validated.body;
+  const task = await Task.create({
+    user: req.user.id,
+    title,
+    description,
+    dueDate,
+    priority,
+    status,
+    client: client || null,
+    recurringFrequency: recurringFrequency || null,
+    emailReminderEnabled: !!emailReminderEnabled,
+    emailReminderHoursBefore: emailReminderHoursBefore ?? 24,
+    browserReminderEnabled: !!browserReminderEnabled,
+  });
+  await task.populate('client', 'name');
+  await recordAudit(req, {
+    action: 'create',
+    entityType: 'task',
+    entityId: task._id,
+    entityLabel: task.title,
+    changes: [{ field: 'title', from: null, to: task.title }],
+  });
+  res.status(201).json(task);
+}));
 
 router.post('/bulk/complete', async (req, res) => {
   try {

@@ -2,6 +2,17 @@ const express = require('express');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 const { authRateLimit } = require('../middleware/rateLimit');
+const { asyncHandler, AppError } = require('../middleware/errors');
+const { validate } = require('../middleware/validate');
+const {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  profileSchema,
+  changePasswordSchema,
+} = require('../validation/schemas');
 const { sendPasswordResetEmail } = require('../utils/email');
 const { validatePassword } = require('../utils/password');
 const {
@@ -29,187 +40,149 @@ const issueTokens = async (user) => {
   return { token, refreshToken, user: toPublicUser(user) };
 };
 
-router.post('/register', authRateLimit, async (req, res) => {
-  try {
-    const { name, email, password, branch, employeeId } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ message: 'All fields are required' });
-    const pw = validatePassword(password);
-    if (!pw.valid) return res.status(400).json({ message: pw.message, errors: pw.errors });
-    const exists = await User.findOne({ email });
-    if (exists) return res.status(409).json({ message: 'Email already registered' });
+router.post('/register', authRateLimit, validate(registerSchema), asyncHandler(async (req, res) => {
+  if (process.env.ALLOW_REGISTRATION === 'false') {
+    throw new AppError('Registration is disabled on this server', 403);
+  }
+  const { name, email, password, branch, employeeId } = req.validated.body;
+  const pw = validatePassword(password);
+  if (!pw.valid) throw new AppError(pw.message, 400, pw.errors);
+  const exists = await User.findOne({ email: email.toLowerCase() });
+  if (exists) throw new AppError('Email already registered', 409);
+    const hasSmtp =
+      process.env.SMTP_HOST &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS;
+
     const user = await User.create({
       name,
       email,
       password,
       branch: branch || '',
       employeeId: employeeId || '',
+      notificationPrefs: {
+        dailyDigestEnabled: !!hasSmtp,
+        dailyDigestHour: 7,
+        pushEnabled: false,
+      },
+      backupPrefs: {
+        weeklyBackupEnabled: !!hasSmtp,
+        weeklyBackupWeekday: 1,
+        weeklyBackupHour: 8,
+      },
     });
-    const payload = await issueTokens(user);
-    res.status(201).json(payload);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+  const payload = await issueTokens(user);
+  res.status(201).json(payload);
+}));
 
-router.post('/login', authRateLimit, async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: 'Email and password are required' });
-    const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password)))
-      return res.status(401).json({ message: 'Invalid credentials' });
-    user.pruneExpiredRefreshTokens();
-    const payload = await issueTokens(user);
-    res.json(payload);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+router.post('/login', authRateLimit, validate(loginSchema), asyncHandler(async (req, res) => {
+  const { email, password } = req.validated.body;
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user || !(await user.comparePassword(password))) {
+    throw new AppError('Invalid credentials', 401);
   }
-});
+  user.pruneExpiredRefreshTokens();
+  res.json(await issueTokens(user));
+}));
 
-router.post('/refresh', async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    if (!refreshToken)
-      return res.status(400).json({ message: 'Refresh token is required' });
+router.post('/refresh', validate(refreshSchema), asyncHandler(async (req, res) => {
+  const { refreshToken } = req.validated.body;
+  const hashed = hashToken(refreshToken);
+  const user = await User.findOne({ 'refreshTokens.token': hashed });
+  if (!user || !user.findValidRefreshToken(hashed)) {
+    throw new AppError('Invalid or expired refresh token', 401);
+  }
+  await user.removeRefreshToken(hashed);
+  res.json(await issueTokens(user));
+}));
+
+router.post('/logout', asyncHandler(async (req, res) => {
+  const { refreshToken } = req.body;
+  if (refreshToken) {
     const hashed = hashToken(refreshToken);
     const user = await User.findOne({ 'refreshTokens.token': hashed });
-    if (!user || !user.findValidRefreshToken(hashed))
-      return res.status(401).json({ message: 'Invalid or expired refresh token' });
-
-    await user.removeRefreshToken(hashed);
-    const payload = await issueTokens(user);
-    res.json(payload);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (user) await user.removeRefreshToken(hashed);
   }
-});
+  res.json({ message: 'Logged out' });
+}));
 
-router.post('/logout', async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    if (refreshToken) {
-      const hashed = hashToken(refreshToken);
-      const user = await User.findOne({ 'refreshTokens.token': hashed });
-      if (user) await user.removeRefreshToken(hashed);
-    }
-    res.json({ message: 'Logged out' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-router.post('/forgot-password', authRateLimit, async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email is required' });
-
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (user) {
-      const rawToken = generateResetToken();
-      user.resetPasswordToken = hashToken(rawToken);
-      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
-      await user.save();
-
-      const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const resetUrl = `${frontend}/reset-password?token=${rawToken}`;
-      await sendPasswordResetEmail(user.email, resetUrl);
-    }
-
-    res.json({
-      message: 'If that email is registered, you will receive reset instructions shortly.',
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { token, password } = req.body;
-    if (!token || !password)
-      return res.status(400).json({ message: 'Token and new password are required' });
-    if (password.length < 6)
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
-
-    const hashed = hashToken(token);
-    const user = await User.findOne({
-      resetPasswordToken: hashed,
-      resetPasswordExpires: { $gt: new Date() },
-    });
-    if (!user) return res.status(400).json({ message: 'Invalid or expired reset link' });
-
-    user.password = password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    user.refreshTokens = [];
+router.post('/forgot-password', authRateLimit, validate(forgotPasswordSchema), asyncHandler(async (req, res) => {
+  const { email } = req.validated.body;
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (user) {
+    const rawToken = generateResetToken();
+    user.resetPasswordToken = hashToken(rawToken);
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
-
-    res.json({ message: 'Password updated. You can sign in with your new password.' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+    await sendPasswordResetEmail(user.email, `${frontend}/reset-password?token=${rawToken}`);
   }
-});
+  res.json({
+    message: 'If that email is registered, you will receive reset instructions shortly.',
+  });
+}));
 
-router.get('/me', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password -refreshTokens -resetPasswordToken');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(toPublicUser(user));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+router.post('/reset-password', validate(resetPasswordSchema), asyncHandler(async (req, res) => {
+  const { token, password } = req.validated.body;
+  const pw = validatePassword(password);
+  if (!pw.valid) throw new AppError(pw.message, 400, pw.errors);
+  const hashed = hashToken(token);
+  const user = await User.findOne({
+    resetPasswordToken: hashed,
+    resetPasswordExpires: { $gt: new Date() },
+  });
+  if (!user) throw new AppError('Invalid or expired reset link', 400);
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  user.refreshTokens = [];
+  await user.save();
+  res.json({ message: 'Password updated. You can sign in with your new password.' });
+}));
+
+router.get('/me', authMiddleware, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select('-password -refreshTokens -resetPasswordToken');
+  if (!user) throw new AppError('User not found', 404);
+  res.json(toPublicUser(user));
+}));
+
+router.put('/profile', authMiddleware, validate(profileSchema), asyncHandler(async (req, res) => {
+  const { name, email, branch, employeeId } = req.validated.body;
+  const user = await User.findById(req.user.id);
+  if (!user) throw new AppError('User not found', 404);
+
+  if (name !== undefined) {
+    if (!name.trim()) throw new AppError('Name is required', 400);
+    user.name = name.trim();
   }
-});
-
-router.put('/profile', authMiddleware, async (req, res) => {
-  try {
-    const { name, email, branch, employeeId } = req.body;
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (name !== undefined) {
-      if (!name.trim()) return res.status(400).json({ message: 'Name is required' });
-      user.name = name.trim();
+  if (email !== undefined) {
+    const normalized = email.toLowerCase().trim();
+    if (normalized !== user.email) {
+      const taken = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+      if (taken) throw new AppError('Email already in use', 409);
+      user.email = normalized;
     }
-    if (email !== undefined) {
-      const normalized = email.toLowerCase().trim();
-      if (!normalized) return res.status(400).json({ message: 'Email is required' });
-      if (normalized !== user.email) {
-        const taken = await User.findOne({ email: normalized, _id: { $ne: user._id } });
-        if (taken) return res.status(409).json({ message: 'Email already in use' });
-        user.email = normalized;
-      }
-    }
-    if (branch !== undefined) user.branch = branch.trim();
-    if (employeeId !== undefined) user.employeeId = employeeId.trim();
-
-    await user.save();
-    res.json(toPublicUser(user));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
   }
-});
+  if (branch !== undefined) user.branch = branch.trim();
+  if (employeeId !== undefined) user.employeeId = employeeId.trim();
 
-router.put('/change-password', authMiddleware, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword)
-      return res.status(400).json({ message: 'Current and new password are required' });
-    const pw = validatePassword(newPassword);
-    if (!pw.valid) return res.status(400).json({ message: pw.message, errors: pw.errors });
+  await user.save();
+  res.json(toPublicUser(user));
+}));
 
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    if (!(await user.comparePassword(currentPassword)))
-      return res.status(401).json({ message: 'Current password is incorrect' });
+router.put('/change-password', authMiddleware, validate(changePasswordSchema), asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.validated.body;
+  const pw = validatePassword(newPassword);
+  if (!pw.valid) throw new AppError(pw.message, 400, pw.errors);
 
-    user.password = newPassword;
-    await user.save();
-    res.json({ message: 'Password changed successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  const user = await User.findById(req.user.id);
+  if (!user) throw new AppError('User not found', 404);
+  if (!(await user.comparePassword(currentPassword))) {
+    throw new AppError('Current password is incorrect', 401);
   }
-});
+  user.password = newPassword;
+  await user.save();
+  res.json({ message: 'Password changed successfully' });
+}));
 
 module.exports = router;

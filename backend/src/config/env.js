@@ -2,6 +2,8 @@
  * Validates required environment variables before the server starts.
  */
 function validateEnv() {
+  if (process.env.NODE_ENV === 'test') return;
+
   const errors = [];
   const warnings = [];
 

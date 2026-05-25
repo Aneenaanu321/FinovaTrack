@@ -15,7 +15,6 @@ import { useConfirm } from '../context/ConfirmContext';
 import Modal from '../components/Modal';
 import FormField from '../components/ui/FormField';
 import EmptyState from '../components/ui/EmptyState';
-import { ListSkeleton } from '../components/ui/Skeleton';
 import { validateAppointmentForm } from '../utils/validation';
 import NextFollowUpPrompt from '../components/NextFollowUpPrompt';
 import AppointmentCalendar from '../components/AppointmentCalendar';

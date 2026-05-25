@@ -6,8 +6,6 @@ import Modal from './Modal';
 const TEMPLATE_HEADERS = 'name,phone,email,productType,dealValue,expectedCommission,leadSource,dealStatus,kycStatus,lastContactedAt,nextFollowUpDate,notes,nextAction';
 const SAMPLE_ROW = 'Jane Doe,+15551234567,jane@example.com,Savings,5000,250,Referral,New,Not Started,,Follow up call,';
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
 async function fileToCsv(file) {
   const name = file.name.toLowerCase();
   if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
