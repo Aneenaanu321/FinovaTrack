@@ -19,6 +19,7 @@ const {
 const { buildPipelinePdf } = require('../utils/pipelinePdf');
 const { buildClientsCsvForUser } = require('../utils/clientExport');
 const { processWeeklyBackupForUser } = require('../jobs/weeklyBackup');
+const { getNeedsAttention, snoozeToDate } = require('../utils/followUpAttention');
 
 const router = express.Router();
 router.use(auth);
@@ -72,6 +73,11 @@ router.get('/deleted', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+router.get('/needs-attention', asyncHandler(async (req, res) => {
+  const data = await getNeedsAttention(req.user.id);
+  res.json(data);
+}));
 
 router.get('/stale', async (req, res) => {
   try {
@@ -339,6 +345,23 @@ router.post('/', validate(clientCreateSchema), asyncHandler(async (req, res) => 
       await client.save();
     }
     res.status(201).json(client);
+}));
+
+router.patch('/:id/snooze', asyncHandler(async (req, res) => {
+  const { preset } = req.body;
+  const nextDate = snoozeToDate(preset);
+  if (!nextDate) throw new AppError('Invalid snooze preset', 400);
+
+  const client = await Client.findOne({
+    _id: req.params.id,
+    user: req.user.id,
+    deletedAt: null,
+  });
+  if (!client) throw new AppError('Client not found', 404);
+
+  client.nextFollowUpDate = nextDate;
+  await client.save();
+  res.json(client);
 }));
 
 router.get('/:id', async (req, res) => {

@@ -25,7 +25,13 @@ function PrivateRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   const { defaultHomeRoute, loaded: configLoaded } = useAppConfig();
-  if (loading || !configLoaded) return null;
+  if (loading || !configLoaded) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   const home = defaultHomeRoute || '/attention';
   return !user ? children : <Navigate to={home} replace />;
 }
