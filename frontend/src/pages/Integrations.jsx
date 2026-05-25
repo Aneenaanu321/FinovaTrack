@@ -38,18 +38,18 @@ export default function Integrations() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Integrations</h1>
-        <p className="text-sm text-gray-500 mt-1">Read-only CRM and core banking views. Configure API URLs in backend <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">.env</code>.</p>
+        <p className="text-subtle mt-1">Read-only CRM and core banking views. Configure API URLs in backend <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">.env</code>.</p>
       </div>
 
       {status && (
         <div className="flex flex-wrap gap-2">
-          <span className={`badge ${status.crm?.configured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+          <span className={`badge ${status.crm?.configured ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
             CRM {status.crm?.configured ? 'live' : 'demo'}
           </span>
-          <span className={`badge ${status.banking?.configured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+          <span className={`badge ${status.banking?.configured ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
             Banking {status.banking?.configured ? 'live' : 'demo'}
           </span>
-          <span className={`badge ${status.ai?.openai ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
+          <span className={`badge ${status.ai?.openai ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
             AI {status.ai?.openai ? 'OpenAI' : 'rules'}
           </span>
         </div>
@@ -66,7 +66,7 @@ export default function Integrations() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-100 dark:border-gray-800">
+                <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
                   <th className="py-2 pr-4">ID</th>
                   <th className="py-2 pr-4">Name</th>
                   <th className="py-2 pr-4">Stage</th>
@@ -76,7 +76,7 @@ export default function Integrations() {
               <tbody>
                 {crmRecords.map((r, i) => (
                   <tr key={r.id || i} className="border-b border-gray-50 dark:border-gray-800">
-                    <td className="py-2 pr-4 text-gray-500">{r.id || r._id || '—'}</td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{r.id || r._id || '—'}</td>
                     <td className="py-2 pr-4 font-medium">{r.name || r.company || '—'}</td>
                     <td className="py-2 pr-4">{r.stage || r.dealStatus || r.status || '—'}</td>
                     <td className="py-2">{r.value != null ? Number(r.value).toLocaleString() : '—'}</td>
@@ -107,7 +107,7 @@ export default function Integrations() {
             {banking.accounts.map((a, i) => (
               <li key={a.accountId || i} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-sm">
                 <p className="font-medium">{a.product || a.type || 'Account'} · {a.accountId || a.id}</p>
-                <p className="text-gray-500 mt-1">
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
                   {a.balance != null && <>Balance: {Number(a.balance).toLocaleString()} · </>}
                   Status: {a.status || '—'}
                   {a.kycVerified != null && <> · KYC: {a.kycVerified ? 'Yes' : 'No'}</>}

@@ -132,7 +132,7 @@ export default function Clients() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
+        <h1 className="page-title">Clients</h1>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-secondary text-sm" onClick={handleExportCsv} disabled={exporting}>Export all (CSV)</button>
           <button type="button" className="btn-secondary text-sm" onClick={handleExportExcel} disabled={exporting}>Export all (Excel)</button>
@@ -156,7 +156,7 @@ export default function Clients() {
       {loading ? (
         <div className="flex items-center justify-center h-40"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>
       ) : clients.length === 0 ? (
-        <div className="card text-center py-16 text-gray-400"><p className="text-lg font-medium">No clients found</p><p className="text-sm mt-1">Add your first client to get started</p></div>
+        <div className="card text-center py-16 text-gray-400 dark:text-gray-500"><p className="text-lg font-medium text-gray-900 dark:text-gray-100">No clients found</p><p className="text-sm mt-1 text-gray-500 dark:text-gray-400">Add your first client to get started</p></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {clients.map((c) => {
@@ -167,13 +167,13 @@ export default function Clients() {
               <div key={c._id} className={`card hover:shadow-md transition-shadow ${stale ? 'ring-2 ring-amber-200' : ''}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <Link to={`/clients/${c._id}`} className="font-semibold text-gray-900 hover:text-primary-600">{c.name}</Link>
-                    {c.phone && <p className="text-sm text-gray-500 mt-0.5">{c.phone}</p>}
+                    <Link to={`/clients/${c._id}`} className="font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600">{c.name}</Link>
+                    {c.phone && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{c.phone}</p>}
                     {c.email && <p className="text-sm text-gray-400">{c.email}</p>}
-                    {c.productType && <p className="text-xs text-gray-500 mt-1">{c.productType}{c.leadSource ? ` · ${c.leadSource}` : ''}</p>}
+                    {c.productType && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{c.productType}{c.leadSource ? ` · ${c.leadSource}` : ''}</p>}
                   </div>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400" aria-label="Edit">
+                    <button type="button" onClick={() => openEdit(c)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500" aria-label="Edit">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
                     <button type="button" onClick={() => remove(c._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500" aria-label="Archive">
@@ -188,10 +188,10 @@ export default function Clients() {
                   {kycDone > 0 && <span className="badge bg-slate-100 text-slate-600">Docs {kycDone}/{KYC_DOCS.length}</span>}
                 </div>
                 <div className="flex gap-1 mb-3">
-                  {DEAL_STEPS.map((step, i) => (<div key={step} className={`flex-1 h-1.5 rounded-full ${i <= dealIdx ? 'bg-primary-500' : 'bg-gray-100'}`} />))}
+                  {DEAL_STEPS.map((step, i) => (<div key={step} className={`flex-1 h-1.5 rounded-full ${i <= dealIdx ? 'bg-primary-500' : 'bg-gray-100 dark:bg-gray-700'}`} />))}
                 </div>
                 {(c.dealValue || c.expectedCommission) && (
-                  <p className="text-xs text-gray-500 mb-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     {c.dealValue != null && <span>Value: ${Number(c.dealValue).toLocaleString()}</span>}
                     {c.expectedCommission != null && <span className="ml-2">Commission: ${Number(c.expectedCommission).toLocaleString()}</span>}
                   </p>
@@ -199,7 +199,7 @@ export default function Clients() {
                 {c.lastContactedAt && (
                   <p className="text-xs text-gray-400 mb-1">Last contact: {format(new Date(c.lastContactedAt), 'MMM d, yyyy')}</p>
                 )}
-                {c.nextAction && (<p className="text-xs text-gray-500 bg-amber-50 px-2 py-1 rounded mb-2"><span className="font-medium text-amber-700">Next: </span>{c.nextAction}</p>)}
+                {c.nextAction && (<p className="text-xs text-gray-500 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded mb-2"><span className="font-medium text-amber-700 dark:text-amber-300">Next: </span>{c.nextAction}</p>)}
                 <CallLogFlow
                   clientId={c._id}
                   clientName={c.name}
@@ -215,7 +215,7 @@ export default function Clients() {
       )}
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between card p-3">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Page {page} of {totalPages} · {total} client{total === 1 ? '' : 's'}
           </p>
           <div className="flex gap-2">
@@ -274,7 +274,7 @@ export default function Clients() {
             <label className="label">KYC documents</label>
             <div className="flex flex-wrap gap-3 mt-1">
               {KYC_DOCS.map((d) => (
-                <label key={d.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <label key={d.key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                   <input type="checkbox" checked={!!form.kycDocuments[d.key]} onChange={() => toggleKycDoc(d.key)} className="rounded border-gray-300" />
                   {d.label}
                 </label>
@@ -298,9 +298,9 @@ export default function Clients() {
         ) : (
           <ul className="space-y-2 max-h-96 overflow-y-auto">
             {deletedClients.map((c) => (
-              <li key={c._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <li key={c._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                 <div>
-                  <p className="font-medium text-gray-900">{c.name}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{c.name}</p>
                   <p className="text-xs text-gray-400">Archived {c.deletedAt && format(new Date(c.deletedAt), 'MMM d, yyyy')}</p>
                 </div>
                 <button type="button" className="btn-secondary text-sm" onClick={() => restore(c._id)}>Restore</button>

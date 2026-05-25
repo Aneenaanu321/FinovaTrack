@@ -20,7 +20,15 @@ import NextFollowUpPrompt from '../components/NextFollowUpPrompt';
 import AppointmentCalendar from '../components/AppointmentCalendar';
 import { googleCalendarUrl, outlookCalendarUrl, downloadAppointmentIcs } from '../utils/calendar';
 
-const STATUS_COLOR = { Upcoming: 'bg-blue-100 text-blue-700', Completed: 'bg-green-100 text-green-700', Cancelled: 'bg-gray-100 text-gray-500' };
+const STATUS_COLOR = {
+  Upcoming: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  Completed: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  Cancelled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+};
+const CAL_BTN = 'text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300';
+const VIEW_TOGGLE_INACTIVE = 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300';
+const VIEW_TOGGLE_ACTIVE = 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300';
+const CAL_VIEW_ACTIVE = 'bg-gray-800 dark:bg-gray-600 text-white';
 const TYPE_ICON = { 'In-Person': '🏢', 'Call': '📞', 'Video Call': '💻' };
 const DEAL_STEPS = ['New', 'Contacted', 'Interested', 'Closed'];
 const empty = {
@@ -49,16 +57,16 @@ function AppointmentActions({ appt, onLogCall, onComplete, onEdit }) {
 
   return (
     <div className="flex flex-wrap gap-1 mt-2">
-      <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600" onClick={() => openExternal(googleCalendarUrl(appt))} title="Add to Google Calendar">Google</button>
-      <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600" onClick={() => openExternal(outlookCalendarUrl(appt))} title="Add to Outlook">Outlook</button>
-      <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600" onClick={handleIcs}>.ics</button>
+      <button type="button" className={CAL_BTN} onClick={() => openExternal(googleCalendarUrl(appt))} title="Add to Google Calendar">Google</button>
+      <button type="button" className={CAL_BTN} onClick={() => openExternal(outlookCalendarUrl(appt))} title="Add to Outlook">Outlook</button>
+      <button type="button" className={CAL_BTN} onClick={handleIcs}>.ics</button>
       {appt.status === 'Upcoming' && (
         <>
-          <button type="button" className="text-xs px-2 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800" onClick={() => onLogCall(appt)}>Log call</button>
-          <button type="button" className="text-xs px-2 py-1 rounded-md bg-green-50 hover:bg-green-100 text-green-800" onClick={() => onComplete(appt)}>Complete</button>
+          <button type="button" className="text-xs px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300" onClick={() => onLogCall(appt)}>Log call</button>
+          <button type="button" className="text-xs px-2 py-1 rounded-md bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 text-green-800 dark:text-green-300" onClick={() => onComplete(appt)}>Complete</button>
         </>
       )}
-      <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600" onClick={() => onEdit(appt)}>Edit</button>
+      <button type="button" className={CAL_BTN} onClick={() => onEdit(appt)}>Edit</button>
     </div>
   );
 }
@@ -283,18 +291,18 @@ export default function Appointments() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
+        <h1 className="page-title">Appointments</h1>
         <button type="button" className="btn-primary" onClick={openAdd}>+ Schedule Appointment</button>
       </div>
 
       <div className="card p-4 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={`px-3 py-1.5 rounded-lg text-sm font-medium ${viewMode === 'list' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'}`} onClick={() => { setViewMode('list'); setPage(1); }}>List</button>
-          <button type="button" className={`px-3 py-1.5 rounded-lg text-sm font-medium ${viewMode === 'calendar' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'}`} onClick={() => setViewMode('calendar')}>Calendar</button>
+          <button type="button" className={`px-3 py-1.5 rounded-lg text-sm font-medium ${viewMode === 'list' ? VIEW_TOGGLE_ACTIVE : VIEW_TOGGLE_INACTIVE}`} onClick={() => { setViewMode('list'); setPage(1); }}>List</button>
+          <button type="button" className={`px-3 py-1.5 rounded-lg text-sm font-medium ${viewMode === 'calendar' ? VIEW_TOGGLE_ACTIVE : VIEW_TOGGLE_INACTIVE}`} onClick={() => setViewMode('calendar')}>Calendar</button>
           {viewMode === 'calendar' && (
             <>
-              <button type="button" className={`px-3 py-1.5 rounded-lg text-sm ${calendarView === 'month' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`} onClick={() => setCalendarView('month')}>Month</button>
-              <button type="button" className={`px-3 py-1.5 rounded-lg text-sm ${calendarView === 'week' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`} onClick={() => setCalendarView('week')}>Week</button>
+              <button type="button" className={`px-3 py-1.5 rounded-lg text-sm ${calendarView === 'month' ? CAL_VIEW_ACTIVE : VIEW_TOGGLE_INACTIVE}`} onClick={() => setCalendarView('month')}>Month</button>
+              <button type="button" className={`px-3 py-1.5 rounded-lg text-sm ${calendarView === 'week' ? CAL_VIEW_ACTIVE : VIEW_TOGGLE_INACTIVE}`} onClick={() => setCalendarView('week')}>Week</button>
             </>
           )}
         </div>
@@ -327,13 +335,13 @@ export default function Appointments() {
           <div className="space-y-6">
             {orderedKeys.map((key) => (
               <div key={key}>
-                <h2 className={`text-sm font-semibold uppercase tracking-wide mb-3 ${key === 'Today' ? 'text-primary-600' : key === 'Past' ? 'text-gray-400' : 'text-gray-500'}`}>{key}</h2>
+                <h2 className={`text-sm font-semibold uppercase tracking-wide mb-3 ${key === 'Today' ? 'text-primary-600' : key === 'Past' ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'}`}>{key}</h2>
                 <div className="space-y-3">
                   {grouped[key].map((appt) => (
                     <div key={appt._id} className={`card p-4 ${appt.status === 'Cancelled' ? 'opacity-60' : ''}`}>
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0 text-center">
-                          <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center">
+                          <div className="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-center">
                             <span className="text-lg">{TYPE_ICON[appt.type]}</span>
                           </div>
                           <p className="text-xs text-gray-400 mt-1">{format(new Date(appt.dateTime), 'h:mm a')}</p>
@@ -341,9 +349,9 @@ export default function Appointments() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="font-semibold text-gray-900">{appt.client?.name}</p>
-                              <p className="text-sm text-gray-500">{appt.type}{appt.location ? ` · ${appt.location}` : ''}</p>
-                              {appt.notes && <p className="text-sm text-gray-500 mt-1 italic">{appt.notes}</p>}
+                              <p className="font-semibold text-gray-900 dark:text-gray-100">{appt.client?.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{appt.type}{appt.location ? ` · ${appt.location}` : ''}</p>
+                              {appt.notes && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">{appt.notes}</p>}
                               {(appt.remindEmail || appt.remindSms) && (
                                 <p className="text-xs text-gray-400 mt-1">
                                   Reminders: {appt.remindEmail ? 'Email' : ''}{appt.remindEmail && appt.remindSms ? ' + ' : ''}{appt.remindSms ? 'SMS' : ''}
@@ -381,7 +389,7 @@ export default function Appointments() {
           {pagination.pages > 1 && (
             <div className="flex items-center justify-center gap-3 pt-2">
               <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-              <span className="text-sm text-gray-500">Page {page} of {pagination.pages} ({pagination.total} total)</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Page {page} of {pagination.pages} ({pagination.total} total)</span>
               <button type="button" className="btn-secondary px-3 py-1.5 text-sm" disabled={page >= pagination.pages} onClick={() => setPage((p) => p + 1)}>Next</button>
             </div>
           )}
@@ -427,7 +435,7 @@ export default function Appointments() {
 
       <Modal open={!!logModal} onClose={() => setLogModal(null)} title="Log call">
         <form onSubmit={submitLogCall} className="space-y-4">
-          <p className="text-sm text-gray-500">Client: <strong>{logModal?.client?.name}</strong></p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Client: <strong>{logModal?.client?.name}</strong></p>
           <div><label className="label">Call notes *</label><textarea value={logNotes} onChange={(e) => setLogNotes(e.target.value)} className="input" rows={4} placeholder="What was discussed?" required /></div>
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input type="checkbox" checked={logCallFlags.callRecorded} onChange={(e) => setLogCallFlags({ ...logCallFlags, callRecorded: e.target.checked })} className="rounded" />
@@ -448,7 +456,7 @@ export default function Appointments() {
 
       <Modal open={!!completeModal} onClose={() => setCompleteModal(null)} title="Complete appointment">
         <form onSubmit={submitComplete} className="space-y-4">
-          <p className="text-sm text-gray-500">Mark <strong>{completeModal?.client?.name}</strong> meeting as done and optionally update deal stage.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Mark <strong>{completeModal?.client?.name}</strong> meeting as done and optionally update deal stage.</p>
           <div><label className="label">Call / meeting notes</label><textarea value={completeForm.callNotes} onChange={(e) => setCompleteForm({ ...completeForm, callNotes: e.target.value })} className="input" rows={3} placeholder="Optional summary" /></div>
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input type="checkbox" checked={completeForm.callRecorded} onChange={(e) => setCompleteForm({ ...completeForm, callRecorded: e.target.checked })} className="rounded" />

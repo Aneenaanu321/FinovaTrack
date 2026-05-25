@@ -34,7 +34,7 @@ export default function InstallPWA() {
   return (
     <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50 card shadow-lg border-primary-100 dark:border-primary-900 p-4">
       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Install FinovaTrack</p>
-      <p className="text-xs text-gray-500 mt-1">Add to your home screen for quick access on mobile.</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Add to your home screen for quick access on mobile.</p>
       <div className="flex gap-2 mt-3">
         <button type="button" className="btn-primary text-sm flex-1" onClick={install}>Install</button>
         <button

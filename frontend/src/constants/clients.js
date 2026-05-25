@@ -9,16 +9,16 @@ export const KYC_DOCS = [
 ];
 
 export const DEAL_COLOR = {
-  New: 'bg-gray-100 text-gray-600',
-  Contacted: 'bg-blue-100 text-blue-700',
-  Interested: 'bg-purple-100 text-purple-700',
-  Closed: 'bg-green-100 text-green-700',
+  New: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+  Contacted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  Interested: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  Closed: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
 };
 
 export const KYC_COLOR = {
-  'Not Started': 'bg-gray-100 text-gray-600',
-  'In Progress': 'bg-yellow-100 text-yellow-700',
-  Completed: 'bg-green-100 text-green-700',
+  'Not Started': 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+  'In Progress': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+  Completed: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
 };
 
 export const emptyClientForm = {

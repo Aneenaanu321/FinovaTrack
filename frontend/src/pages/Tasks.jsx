@@ -269,8 +269,8 @@ export default function Tasks() {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className={`font-medium ${showComplete ? 'text-gray-900' : 'text-gray-500 line-through'}`}>{task.title}</p>
-              {task.description && <p className="text-sm text-gray-500 mt-0.5">{task.description}</p>}
+              <p className={`font-medium ${showComplete ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400 line-through'}`}>{task.title}</p>
+              {task.description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{task.description}</p>}
               <div className="flex items-center gap-2 mt-2 text-xs text-gray-400 flex-wrap">
                 {task.dueDate && (
                   <span className={overdue ? 'text-red-500 font-medium' : ''}>
@@ -292,7 +292,7 @@ export default function Tasks() {
             <div className="flex items-center gap-1 flex-shrink-0">
               <span className={`badge ${PRIORITY_COLOR[task.priority]}`}>{task.priority}</span>
               {showComplete && (
-                <button onClick={() => openEdit(task)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400" aria-label="Edit">
+                <button onClick={() => openEdit(task)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-400 dark:text-gray-500" aria-label="Edit">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 </button>
               )}
@@ -355,10 +355,10 @@ export default function Tasks() {
 
       {hasSelection && (
         <div className="card p-3 flex flex-wrap items-center gap-3 bg-primary-50/50 border-primary-100">
-          <span className="text-sm font-medium text-gray-700">{selected.size} selected</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{selected.size} selected</span>
           <button type="button" className="btn-primary text-sm py-1.5" onClick={bulkComplete}>Complete selected</button>
-          <button type="button" className="btn-secondary text-sm py-1.5 text-red-600 border-red-200 hover:bg-red-50" onClick={bulkDelete}>Delete selected</button>
-          <button type="button" className="text-sm text-gray-500 hover:text-gray-700 ml-auto" onClick={() => setSelected(new Set())}>Clear</button>
+          <button type="button" className="btn-secondary text-sm py-1.5 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/30" onClick={bulkDelete}>Delete selected</button>
+          <button type="button" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-auto" onClick={() => setSelected(new Set())}>Clear</button>
         </div>
       )}
 
@@ -369,8 +369,8 @@ export default function Tasks() {
           {pending.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending ({pending.length})</h2>
-                <label className="text-xs text-gray-500 flex items-center gap-1.5 cursor-pointer">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pending ({pending.length})</h2>
+                <label className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={pending.every((t) => selected.has(t._id))} onChange={() => toggleSelectAll(pending)} />
                   Select all on page
                 </label>
@@ -398,7 +398,7 @@ export default function Tasks() {
             />
           )}
           {total > 0 && (
-            <div className="flex items-center justify-between text-sm text-gray-500 pt-2">
+            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-2">
               <span>
                 Showing {(filters.page - 1) * PAGE_SIZE + 1}–{Math.min(filters.page * PAGE_SIZE, total)} of {total}
               </span>
@@ -466,8 +466,8 @@ export default function Tasks() {
           </div>
           <div><label className="label">Linked Client</label><select name="client" value={form.client} onChange={handle} className="input"><option value="">— No client —</option>{clients.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}</select></div>
           <div className="space-y-2 border-t border-gray-100 pt-3">
-            <p className="text-sm font-medium text-gray-700">Reminders</p>
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Reminders</p>
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <input type="checkbox" name="emailReminderEnabled" checked={form.emailReminderEnabled} onChange={handle} />
               Email reminder before due date
             </label>
@@ -477,7 +477,7 @@ export default function Tasks() {
                 <input name="emailReminderHoursBefore" type="number" min={1} max={168} value={form.emailReminderHoursBefore} onChange={handle} className="input w-32" />
               </div>
             )}
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <input type="checkbox" name="browserReminderEnabled" checked={form.browserReminderEnabled} onChange={handle} />
               Browser notification (~15 min before due)
             </label>

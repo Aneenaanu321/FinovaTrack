@@ -1,10 +1,11 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import AppLogo from './AppLogo';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import AppLogo, { LogoMark } from './AppLogo';
+import LogoutButton from './LogoutButton';
 
 const nav = [
-  { to: '/attention', label: 'Today', icon: AttentionIcon },
   { to: '/dashboard', label: 'Dashboard', icon: HomeIcon },
+  { to: '/attention', label: 'Today', icon: AttentionIcon },
   { to: '/clients', label: 'Clients', icon: UsersIcon },
   { to: '/pipeline', label: 'Pipeline', icon: PipelineIcon },
   { to: '/tasks', label: 'Tasks', icon: CheckIcon },
@@ -71,7 +72,34 @@ function SettingsIcon() {
   );
 }
 
-export default function Sidebar({ open, onClose }) {
+function CloseIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+function CollapseIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+const iconBtn =
+  'p-2 min-h-[44px] min-w-[44px] rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 flex items-center justify-center shrink-0';
+
+export default function Sidebar({ open, collapsed, onClose, onToggleCollapse }) {
   const location = useLocation();
 
   return (
@@ -79,16 +107,60 @@ export default function Sidebar({ open, onClose }) {
       {open && (
         <div className="fixed inset-0 z-20 bg-black/40 md:hidden" onClick={onClose} />
       )}
-      <aside className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col
-        transform transition-transform duration-200 ease-in-out
+      <aside
+        className={`
+        fixed inset-y-0 left-0 z-30 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col
+        transform transition-all duration-200 ease-in-out
         md:static md:translate-x-0
+        ${collapsed ? 'w-[4.5rem] md:w-[4.5rem]' : 'w-64'}
         ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
-        <div className="px-4 py-5 border-b border-gray-100 dark:border-gray-800">
-          <AppLogo size="md" to="/attention" subtitle="Sales tracker" />
+      `}
+      >
+        <div
+          className={`border-b border-gray-100 dark:border-gray-800 ${
+            collapsed
+              ? 'px-2 py-3 flex flex-col items-center gap-2'
+              : 'px-4 py-5 flex items-center gap-2 justify-between'
+          }`}
+        >
+          {!collapsed && <AppLogo size="md" to="/attention" subtitle="Sales tracker" className="min-w-0 flex-1" />}
+          {collapsed && (
+            <Link to="/attention" className="hover:opacity-90 transition-opacity" title="FinovaTrack">
+              <LogoMark size="sm" />
+            </Link>
+          )}
+          <button
+            type="button"
+            className={`${iconBtn} md:hidden`}
+            onClick={onClose}
+            aria-label="Close sidebar"
+          >
+            <CloseIcon />
+          </button>
+          {onToggleCollapse && !collapsed && (
+            <button
+              type="button"
+              className={`${iconBtn} hidden md:flex`}
+              onClick={onToggleCollapse}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <CollapseIcon />
+            </button>
+          )}
+          {onToggleCollapse && collapsed && (
+            <button
+              type="button"
+              className={`${iconBtn} hidden md:flex`}
+              onClick={onToggleCollapse}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+            >
+              <ExpandIcon />
+            </button>
+          )}
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className={`flex-1 py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
           {nav.map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to || location.pathname.startsWith(`${to}/`);
             return (
@@ -96,21 +168,32 @@ export default function Sidebar({ open, onClose }) {
                 key={to}
                 to={to}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-3 min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
+                title={collapsed ? label : undefined}
+                className={`flex items-center rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
+                  collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
+                } ${
                   active
                     ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
                 }`}
               >
                 <Icon />
-                {label}
+                {!collapsed && <span>{label}</span>}
               </NavLink>
             );
           })}
         </nav>
-        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">
-          Bank Sales Tracker
+        <div className={`border-t border-gray-100 dark:border-gray-800 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}>
+          <LogoutButton
+            variant={collapsed ? 'sidebar-collapsed' : 'sidebar'}
+            onAction={onClose}
+          />
         </div>
+        {!collapsed && (
+          <div className="px-6 py-2 pb-4 text-xs text-gray-400 dark:text-gray-500">
+            Bank Sales Tracker
+          </div>
+        )}
       </aside>
     </>
   );

@@ -1,36 +1,31 @@
-import React, { useState } from 'react';
-
+import React from 'react';
 import { Link } from 'react-router-dom';
-
 import { useAuth } from '../context/AuthContext';
-
 import { useTheme } from '../context/ThemeContext';
-
-import Modal from './Modal';
 import NotificationCenter from './NotificationCenter';
 import AppLogo from './AppLogo';
 
 
 
-export default function Navbar({ onMenuClick, onSearchClick, onHelpClick }) {
+function MenuIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
 
-  const { user, logout } = useAuth();
+function SidebarOpenIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+    </svg>
+  );
+}
 
+export default function Navbar({ sidebarCollapsed, onMenuClick, onSidebarToggle, onSearchClick }) {
+  const { user } = useAuth();
   const { dark, toggle } = useTheme();
-
-  const [logoutOpen, setLogoutOpen] = useState(false);
-
-
-
-  const confirmLogout = async () => {
-
-    setLogoutOpen(false);
-
-    await logout();
-
-  };
-
-
 
   return (
 
@@ -39,24 +34,25 @@ export default function Navbar({ onMenuClick, onSearchClick, onHelpClick }) {
       <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 md:px-6 py-3 flex items-center justify-between gap-2">
 
         <button
-
           type="button"
-
-          className="md:hidden p-2.5 min-h-[44px] min-w-[44px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
-
+          className="md:hidden p-2.5 min-h-[44px] min-w-[44px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-700 dark:text-gray-200"
           onClick={onMenuClick}
-
-          aria-label="Open menu"
-
+          aria-label="Open sidebar"
         >
-
-          <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-
-          </svg>
-
+          <MenuIcon />
         </button>
+
+        {sidebarCollapsed && onSidebarToggle && (
+          <button
+            type="button"
+            className="hidden md:flex p-2.5 min-h-[44px] min-w-[44px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 items-center justify-center text-gray-700 dark:text-gray-200"
+            onClick={onSidebarToggle}
+            aria-label="Open sidebar"
+            title="Open sidebar"
+          >
+            <SidebarOpenIcon />
+          </button>
+        )}
 
         <div className="md:hidden flex-shrink-0">
           <AppLogo size="sm" to="/attention" className="gap-2" />
@@ -87,22 +83,6 @@ export default function Navbar({ onMenuClick, onSearchClick, onHelpClick }) {
 
 
         <div className="flex items-center gap-1 sm:gap-2">
-
-          <button
-
-            type="button"
-
-            onClick={onHelpClick}
-
-            className="p-2.5 min-h-[44px] min-w-[44px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hidden sm:flex items-center justify-center"
-
-            title="Keyboard shortcuts (?)"
-
-          >
-
-            <span className="text-sm font-medium">?</span>
-
-          </button>
 
           <NotificationCenter />
 
@@ -149,67 +129,14 @@ export default function Navbar({ onMenuClick, onSearchClick, onHelpClick }) {
           </Link>
 
           <Link
-
             to="/settings"
-
             className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center text-white text-sm font-semibold hover:bg-primary-700 min-h-[44px] min-w-[44px]"
-
             title="Settings"
-
           >
-
             {user?.name?.[0]?.toUpperCase()}
-
           </Link>
-
-          <button
-
-            type="button"
-
-            onClick={() => setLogoutOpen(true)}
-
-            className="p-2.5 min-h-[44px] min-w-[44px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 flex items-center justify-center"
-
-            title="Logout"
-
-          >
-
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-
-            </svg>
-
-          </button>
-
         </div>
-
       </header>
-
-
-
-      <Modal open={logoutOpen} onClose={() => setLogoutOpen(false)} title="Sign out?">
-
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">You will need to sign in again to access your data.</p>
-
-        <div className="flex gap-3 justify-end">
-
-          <button type="button" className="btn-secondary" onClick={() => setLogoutOpen(false)}>
-
-            Cancel
-
-          </button>
-
-          <button type="button" className="btn-primary" onClick={confirmLogout}>
-
-            Sign out
-
-          </button>
-
-        </div>
-
-      </Modal>
-
     </>
 
   );

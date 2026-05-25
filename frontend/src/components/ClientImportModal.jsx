@@ -113,7 +113,7 @@ export default function ClientImportModal({ open, onClose, onImported }) {
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Upload CSV or Excel (.csv, .xlsx, .xls). Rows with the same email or phone as an existing client — or another row in the file — are skipped.
         </p>
-        <p className="text-xs text-gray-500 font-mono break-all">{TEMPLATE_HEADERS}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono break-all">{TEMPLATE_HEADERS}</p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-secondary text-sm" onClick={downloadTemplate}>
             Download template
@@ -149,7 +149,7 @@ export default function ClientImportModal({ open, onClose, onImported }) {
                       ? 'text-green-700 dark:text-green-400'
                       : row.status === 'duplicate'
                         ? 'text-amber-700 dark:text-amber-400'
-                        : 'text-red-600'
+                        : 'text-red-600 dark:text-red-400'
                   }
                 >
                   <span className="font-medium">{row.name}</span>
@@ -191,8 +191,8 @@ export default function ClientImportModal({ open, onClose, onImported }) {
             )}
             {result.errors?.length > 0 && (
               <div>
-                <p className="text-red-600 font-medium">Errors ({result.errors.length})</p>
-                <ul className="mt-1 text-xs text-gray-600 max-h-24 overflow-y-auto">
+                <p className="text-red-600 dark:text-red-400 font-medium">Errors ({result.errors.length})</p>
+                <ul className="mt-1 text-xs text-gray-600 dark:text-gray-400 max-h-24 overflow-y-auto">
                   {result.errors.map((e, i) => (
                     <li key={i}>{e.reason}</li>
                   ))}

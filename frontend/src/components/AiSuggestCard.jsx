@@ -34,7 +34,7 @@ export default function AiSuggestCard({ clientId, onApplied }) {
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">AI assistant</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Suggests next steps from deal stage, KYC, and notes</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Suggests next steps from deal stage, KYC, and notes</p>
         </div>
         <button type="button" className="btn-primary text-sm" onClick={suggest} disabled={loading}>
           {loading ? 'Thinking…' : 'Suggest'}
@@ -44,9 +44,9 @@ export default function AiSuggestCard({ clientId, onApplied }) {
         <div className="space-y-3">
           <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{result.suggestion}</p>
           {result.suggestedDealStatus && (
-            <p className="text-xs text-gray-500">Suggested deal stage: <span className="font-medium">{result.suggestedDealStatus}</span></p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Suggested deal stage: <span className="font-medium">{result.suggestedDealStatus}</span></p>
           )}
-          <ul className="text-xs text-gray-500 list-disc list-inside space-y-0.5">
+          <ul className="text-xs text-gray-500 dark:text-gray-400 list-disc list-inside space-y-0.5">
             {result.reasons?.map((r, i) => <li key={i}>{r}</li>)}
           </ul>
           <p className="text-xs text-gray-400">Source: {result.source === 'openai' ? 'OpenAI' : 'Smart rules'}</p>

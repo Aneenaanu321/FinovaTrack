@@ -15,7 +15,7 @@ function Section({ title, count, description, children }) {
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           {title}
-          <span className="text-sm font-normal text-gray-500">({count})</span>
+          <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({count})</span>
         </h2>
         {description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>}
       </div>
@@ -32,16 +32,16 @@ function ClientRow({ client, reason, onRefresh }) {
         <Link to={`/clients/${client._id}`} className="font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600">
           {client.name}
         </Link>
-        {client.phone && <p className="text-sm text-gray-500">{client.phone}</p>}
+        {client.phone && <p className="text-sm text-gray-500 dark:text-gray-400">{client.phone}</p>}
         <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">{reason}</p>
         {client.nextAction && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{client.nextAction}</p>}
         {client.nextFollowUpDate && (
-          <p className={`text-xs mt-1 ${overdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+          <p className={`text-xs mt-1 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
             Follow-up: {formatFollowUpDate(client.nextFollowUpDate)}
           </p>
         )}
         {isStaleClient(client) && (
-          <span className="badge bg-amber-100 text-amber-800 mt-2 inline-block">Stale lead</span>
+          <span className="badge bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 mt-2 inline-block">Stale lead</span>
         )}
       </div>
       <FollowUpSnooze clientId={client._id} onDone={onRefresh} compact />
@@ -101,7 +101,7 @@ export default function NeedsAttention() {
       {allClear ? (
         <div className="card text-center py-16">
           <p className="text-lg font-medium text-gray-900 dark:text-gray-100">You're all caught up</p>
-          <p className="text-sm text-gray-500 mt-2">Nothing needs your attention right now.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Nothing needs your attention right now.</p>
           <Link to="/clients" className="btn-primary inline-flex mt-6">View clients</Link>
         </div>
       ) : (
@@ -122,7 +122,7 @@ export default function NeedsAttention() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 dark:text-gray-100">{task.title}</p>
-                    <p className="text-xs text-red-600">Due {format(new Date(task.dueDate), 'MMM d, yyyy')}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400">Due {format(new Date(task.dueDate), 'MMM d, yyyy')}</p>
                     {task.client && (
                       <Link to={`/clients/${task.client._id}`} className="text-xs text-primary-600 hover:underline">
                         {task.client.name}

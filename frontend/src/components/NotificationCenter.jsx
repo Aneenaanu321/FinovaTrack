@@ -4,11 +4,11 @@ import { formatDistanceToNow } from 'date-fns';
 import useNotifications from '../hooks/useNotifications';
 
 const TYPE_STYLE = {
-  overdue_task: 'bg-red-100 text-red-700',
-  today_task: 'bg-blue-100 text-blue-700',
-  today_appointment: 'bg-purple-100 text-purple-700',
-  upcoming_appointment: 'bg-gray-100 text-gray-700',
-  stale_lead: 'bg-amber-100 text-amber-800',
+  overdue_task: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  today_task: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  today_appointment: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  upcoming_appointment: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  stale_lead: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 };
 
 export default function NotificationCenter() {
@@ -56,11 +56,11 @@ export default function NotificationCenter() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[min(100vw-2rem,22rem)] bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Notifications</h3>
+        <div className="absolute right-0 mt-2 w-[min(100vw-2rem,22rem)] bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Notifications</h3>
             {summary.overdueCount > 0 && (
-              <span className="badge bg-red-100 text-red-700">{summary.overdueCount} overdue</span>
+              <span className="badge bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">{summary.overdueCount} overdue</span>
             )}
           </div>
 
@@ -69,9 +69,9 @@ export default function NotificationCenter() {
               <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : notifications.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">You&apos;re all caught up</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">You&apos;re all caught up</p>
           ) : (
-            <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+            <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800">
               {notifications.map((n) => (
                 <li
                   key={n.key}
@@ -79,12 +79,12 @@ export default function NotificationCenter() {
                 >
                   <button type="button" className="w-full text-left" onClick={() => go(n)}>
                     <div className="flex items-start gap-2">
-                      <span className={`badge flex-shrink-0 ${TYPE_STYLE[n.type] || 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`badge flex-shrink-0 ${TYPE_STYLE[n.type] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
                         {n.title}
                       </span>
                       {!n.read && <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-1" />}
                     </div>
-                    <p className="text-sm text-gray-800 mt-1">{n.body}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 mt-1">{n.body}</p>
                     {n.createdAt && (
                       <p className="text-xs text-gray-400 mt-0.5">
                         {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
@@ -107,7 +107,7 @@ export default function NotificationCenter() {
 
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex gap-2 justify-between bg-gray-50/80 dark:bg-gray-800/80">
             {notifications.some((n) => !n.read) && (
-              <button type="button" className="text-xs text-gray-600 hover:text-gray-900" onClick={dismissAll}>
+              <button type="button" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100" onClick={dismissAll}>
                 Mark all read
               </button>
             )}

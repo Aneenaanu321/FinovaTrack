@@ -74,19 +74,19 @@ export function InteractionFlagFields({ flags, onChange }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-500 dark:text-gray-400">Track sensitive interactions for compliance review.</p>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
         <input type="checkbox" checked={!!flags.callRecorded} onChange={(e) => set('callRecorded', e.target.checked)} className="rounded" />
         Call was recorded
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
         <input type="checkbox" checked={!!flags.smsSent} onChange={(e) => set('smsSent', e.target.checked)} className="rounded" />
         SMS sent to client
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
         <input type="checkbox" checked={!!flags.marketingContact} onChange={(e) => set('marketingContact', e.target.checked)} className="rounded" />
         Marketing contact made
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
         <input type="checkbox" checked={!!flags.sensitiveDiscussed} onChange={(e) => set('sensitiveDiscussed', e.target.checked)} className="rounded" />
         Sensitive financial data discussed
       </label>

@@ -92,7 +92,7 @@ export default function GlobalSearch({ open, onClose }) {
                         onClick={() => go(`/clients/${c._id}`)}
                       >
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.name}</p>
-                        <p className="text-xs text-gray-500">{c.dealStatus} · {c.kycStatus}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{c.dealStatus} · {c.kycStatus}</p>
                       </button>
                     ))}
                   </section>
@@ -108,7 +108,7 @@ export default function GlobalSearch({ open, onClose }) {
                         onClick={() => go('/tasks')}
                       >
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t.title}</p>
-                        <p className="text-xs text-gray-500">{t.status}{t.client?.name ? ` · ${t.client.name}` : ''}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{t.status}{t.client?.name ? ` · ${t.client.name}` : ''}</p>
                       </button>
                     ))}
                   </section>
@@ -124,7 +124,7 @@ export default function GlobalSearch({ open, onClose }) {
                         onClick={() => go('/appointments')}
                       >
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{a.client?.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {format(new Date(a.dateTime), 'MMM d, h:mm a')} · {a.type}
                         </p>
                       </button>
@@ -134,7 +134,7 @@ export default function GlobalSearch({ open, onClose }) {
               </>
             )}
           </div>
-          <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 flex justify-between">
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 flex justify-between">
             <span>
               <Link to="/clients" onClick={onClose} className="text-primary-600 hover:underline">Clients</Link>
               {' · '}

@@ -6,6 +6,7 @@ import { authApi, notificationsApi, auditApi, clientsApi, tasksApi, appointments
 import { useAppConfig } from '../context/AppConfigContext';
 import { downloadClientsCsv, downloadClientsExcel } from '../utils/clientExport';
 import PasswordHints from '../components/PasswordHints';
+import LogoutButton from '../components/LogoutButton';
 import { validatePasswordForm } from '../utils/validation';
 import { subscribeToPush, unsubscribeFromPush } from '../utils/push';
 
@@ -198,12 +199,12 @@ export default function Settings() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your profile and account security</p>
+        <h1 className="page-title">Settings</h1>
+        <p className="text-muted mt-1">Manage your profile and account security</p>
       </div>
 
       <section className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile</h2>
+        <h2 className="section-title mb-4">Profile</h2>
         <form onSubmit={saveProfile} className="space-y-4">
           <div>
             <label className="label">Full name</label>
@@ -345,7 +346,7 @@ export default function Settings() {
             </div>
           )}
           {backupPrefs.lastWeeklyBackupAt && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Last backup: {format(new Date(backupPrefs.lastWeeklyBackupAt), 'MMM d, yyyy h:mm a')}
             </p>
           )}
@@ -357,19 +358,19 @@ export default function Settings() {
               Send backup now
             </button>
           </div>
-          <p className="text-xs text-gray-500">Without SMTP, backups are logged in the backend console.</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Without SMTP, backups are logged in the backend console.</p>
         </form>
       </section>
 
       <section className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Notifications</h2>
+        <h2 className="section-title mb-4">Notifications</h2>
         {!emailNotificationsAvailable && (
           <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
             Email is not configured on the server (SMTP). Digest and backup emails will not send until you set SMTP in the backend environment.
           </p>
         )}
         <form onSubmit={saveNotifPrefs} className="space-y-4">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"
               checked={notifPrefs.dailyDigestEnabled}
@@ -388,7 +389,7 @@ export default function Settings() {
                 onChange={(e) => setNotifPrefs({ ...notifPrefs, dailyDigestHour: e.target.value })}
                 className="input w-24"
               />
-              <p className="text-xs text-gray-500 mt-1">Without SMTP, digest is logged in the backend console.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Without SMTP, digest is logged in the backend console.</p>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
@@ -400,9 +401,9 @@ export default function Settings() {
             </button>
           </div>
         </form>
-        <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
-          <p className="text-sm font-medium text-gray-700">Push notifications (PWA)</p>
-          <p className="text-xs text-gray-500">
+        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Push notifications (PWA)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Install the app from your browser menu, then enable push. Requires VAPID keys on the server (
             <code className="text-xs">npm run generate-vapid</code> in backend).
           </p>
@@ -419,13 +420,13 @@ export default function Settings() {
               )}
             </div>
           ) : (
-            <p className="text-xs text-amber-700">Push not configured on server yet.</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">Push not configured on server yet.</p>
           )}
         </div>
       </section>
 
       <section className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Change password</h2>
+        <h2 className="section-title mb-4">Change password</h2>
         <form onSubmit={savePassword} className="space-y-4">
           <div>
             <label className="label">Current password</label>
@@ -449,7 +450,7 @@ export default function Settings() {
               required
             />
             <PasswordHints password={passwords.newPassword} />
-            {passwordErrors.newPassword && <p className="text-xs text-red-600 mt-1">{passwordErrors.newPassword}</p>}
+            {passwordErrors.newPassword && <p className="text-xs text-red-600 dark:text-red-400 mt-1">{passwordErrors.newPassword}</p>}
           </div>
           <div>
             <label className="label">Confirm new password</label>
@@ -461,7 +462,7 @@ export default function Settings() {
               className={`input ${passwordErrors.confirmPassword ? 'input-error' : ''}`}
               required
             />
-            {passwordErrors.confirmPassword && <p className="text-xs text-red-600 mt-1">{passwordErrors.confirmPassword}</p>}
+            {passwordErrors.confirmPassword && <p className="text-xs text-red-600 dark:text-red-400 mt-1">{passwordErrors.confirmPassword}</p>}
           </div>
           <button type="submit" className="btn-primary" disabled={savingPassword}>
             {savingPassword ? 'Updating…' : 'Change password'}
@@ -490,7 +491,7 @@ export default function Settings() {
                   <span className="text-xs text-gray-400">{format(new Date(entry.createdAt), 'MMM d, yyyy h:mm a')}</span>
                 </div>
                 {entry.changes?.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {entry.changes.slice(0, 3).map((c) => c.field).join(', ')}
                     {entry.changes.length > 3 ? ` +${entry.changes.length - 3} more` : ''}
                   </p>
@@ -499,6 +500,14 @@ export default function Settings() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="card p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Account</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Sign out of FinovaTrack on this device. You can sign back in with your email and password.
+        </p>
+        <LogoutButton variant="settings" />
       </section>
 
       <section className="card p-6 text-sm text-gray-500 dark:text-gray-400">
