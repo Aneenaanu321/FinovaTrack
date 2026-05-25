@@ -106,7 +106,8 @@ cd ../frontend && npm ci && npm run build
 ### 2. Deploy frontend on Vercel
 
 1. [vercel.com](https://vercel.com) → **Add New** → **Project** → import the same repo.
-2. **Root directory:** `frontend`
+2. **Root directory:** leave as **repo root** (`.`). The repo includes a root `vercel.json` that builds `frontend/`.  
+   **Or** set Root directory to `frontend` and use `frontend/vercel.json` only — do not use both conflicting setups.
 3. **Framework preset:** Vite (auto-detected)
 4. **Build command:** `npm run build` (default)
 5. **Output directory:** `dist` (default)
