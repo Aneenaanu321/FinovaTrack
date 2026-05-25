@@ -307,7 +307,7 @@ export default function Tasks() {
   };
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
         <div className="flex flex-wrap gap-2">

@@ -202,7 +202,7 @@ export default function Dashboard() {
   const dealsGoal = monthlyTargets?.clientsClosed ?? 0;
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Good morning, {user?.name?.split(' ')[0]} 👋</h1>

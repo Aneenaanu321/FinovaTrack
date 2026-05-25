@@ -130,7 +130,7 @@ export default function Clients() {
   const openTrash = () => { loadDeleted(); setTrashOpen(true); };
 
   return (
-    <div className="max-w-7xl space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
         <div className="flex flex-wrap gap-2">

@@ -35,7 +35,7 @@ export default function Integrations() {
   const crmRecords = crm?.records || [];
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Integrations</h1>
         <p className="text-sm text-gray-500 mt-1">Read-only CRM and core banking views. Configure API URLs in backend <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">.env</code>.</p>

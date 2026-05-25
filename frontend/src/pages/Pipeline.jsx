@@ -78,7 +78,7 @@ export default function Pipeline() {
   };
 
   return (
-    <div className="max-w-[100rem] space-y-5 pb-4">
+    <div className="space-y-5 pb-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Deal pipeline</h1>

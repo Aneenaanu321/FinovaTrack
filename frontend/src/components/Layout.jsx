@@ -28,7 +28,9 @@ export default function Layout() {
           onHelpClick={() => setHelpOpen(true)}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          <Outlet />
+          <div className="w-full max-w-7xl mx-auto min-h-0">
+            <Outlet />
+          </div>
         </main>
         <BottomNav />
       </div>

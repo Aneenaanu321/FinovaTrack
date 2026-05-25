@@ -76,7 +76,7 @@ export default function NeedsAttention() {
     }
   };
 
-  if (loading) return <div className="max-w-3xl"><ListSkeleton rows={6} /></div>;
+  if (loading) return <div><ListSkeleton rows={6} /></div>;
 
   const {
     overdueTasks = [],
@@ -90,7 +90,7 @@ export default function NeedsAttention() {
   const allClear = counts?.total === 0;
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Needs attention today</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

@@ -281,7 +281,7 @@ export default function Appointments() {
   const orderedKeys = order.filter((k) => grouped[k]);
 
   return (
-    <div className="max-w-6xl space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
         <button type="button" className="btn-primary" onClick={openAdd}>+ Schedule Appointment</button>
